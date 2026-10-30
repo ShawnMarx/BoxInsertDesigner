@@ -427,7 +427,9 @@ SolidCraft with changes going back and forth between the agent and the app. Deci
       faces regenerated from the blurred photos; Shawn reviews them before anything is public.
       Done 2026-10-30: `examples/ccg-example/`, the art pixelated 56 blocks across (decks, rules
       and villain cards, board, box; tokens, dials and the stand as taken), Lorcana's name out
-- [ ] Switch over: archive the old repo, push the fresh one public, repoint the local clone
+- [x] Switch over: archive the old repo, push the fresh one public, repoint the local clone.
+      Done 2026-10-30: public from `2929246`; old history in `BoxInsertDesigner-archive` (private,
+      archived; the local remote `archive`)
 
 ---
 
