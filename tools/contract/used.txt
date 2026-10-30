@@ -1,0 +1,13 @@
+solid.box
+solid.cylinder
+solid.fillet
+solid.move
+solid.combine
+solid.chamfer
+solid.extrude
+sketch.create
+sketch.text
+sketch.finish
+file.new
+file.save_mesh
+inspect.measure

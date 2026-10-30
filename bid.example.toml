@@ -1,0 +1,19 @@
+# BoxInsertDesigner local setup. Copy to bid.toml in your games folder (games/bid.toml, or
+# $BID_GAMES/bid.toml), where it is versioned with your games rather than with the code.
+# Every key is optional; the environment variable after it overrides it.
+
+[server]
+bind = "127.0.0.1:8102"     # BID_BIND. Loopback or a private address; a wildcard is refused.
+# Host names besides loopback and the bind address that requests may use (BID_HOSTS,
+# comma-separated): e.g. the name a private network publishes it under. Others get 421.
+# hosts = ["mymac.example-tailnet.ts.net"]
+# web_dir = "web"           # BID_WEB_DIR
+# styles = "styles"         # BID_STYLES
+# solidcraft = "/path/to/solidcraft-cli"   # BID_SOLIDCRAFT; default: the pin in upstream/
+
+# Used by tools/upkeep/upkeep.sh when it redeploys a launchd-managed service.
+[service]
+# label = "com.example.boxinsertdesigner"
+
+[upkeep]
+# session = "bid-upkeep"    # the screen / remote-control name of the fix session

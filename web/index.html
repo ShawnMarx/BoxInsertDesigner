@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Box Insert Designer</title>
+  <link rel="stylesheet" href="style.css">
+  <script type="importmap">
+    { "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+    } }
+  </script>
+</head>
+<body>
+  <header class="top">
+    <div class="title">
+      <h1><button id="game-name" class="project-btn" aria-haspopup="menu" aria-expanded="false" title="Switch project">Box Insert Designer</button></h1>
+      <div id="project-menu" class="project-menu" role="menu" hidden></div>
+      <span id="sample-badge" class="badge sample" hidden>SAMPLE</span>
+    </div>
+    <div class="status">
+      <button id="history-btn" class="toggle">Status</button>
+      <span id="save-status" class="muted small"></span>
+      <span id="live" class="live off" title="Not connected to the server: reconnecting">●</span>
+      <span id="build-status" class="muted">Connecting…</span>
+      <button id="agent-status" class="agent-chip" title="AI agent">AI agent</button>
+      <button id="settings-btn" class="toggle" aria-label="Settings">Settings</button>
+    </div>
+    <nav class="tabs" role="tablist">
+      <button id="tab-btn-components" class="tab" role="tab" data-tab="components">Components <span id="tab-comp-count" class="muted"></span></button>
+      <button id="tab-btn-insert" class="tab" role="tab" data-tab="insert">Insert</button>
+      <button id="tab-btn-tray" class="tab" role="tab" data-tab="tray" hidden>Tray</button>
+      <button id="tab-btn-plates" class="tab" role="tab" data-tab="plates">Plates</button>
+    </nav>
+  </header>
+
+  <main id="tab-components" class="comp-tab" hidden>
+    <section class="comp-list-col">
+      <div class="list-head">
+        <h2>Boxes</h2>
+        <button id="box-add-comp" class="toggle">Add a box</button>
+      </div>
+      <div id="box-list" class="comp-list"></div>
+      <div class="list-head list-next">
+        <h2>Components</h2>
+        <button id="comp-add" class="primary">Add component</button>
+      </div>
+      <div id="comp-list" class="comp-list"></div>
+    </section>
+    <section id="comp-editor" class="comp-editor"></section>
+  </main>
+
+  <main id="tab-insert" class="layout" hidden>
+    <section class="viewer">
+      <div id="box-tabs" class="box-tabs" hidden></div>
+      <canvas id="view" aria-label="3D view of the insert"></canvas>
+      <div id="focus-bar" class="focus-bar" hidden></div>
+      <div class="view-controls">
+        <label class="layer-ctl">Layers
+          <input id="layer" type="range" min="1" max="1" value="1" step="1">
+          <output id="layer-out">all</output>
+        </label>
+        <div class="toggles">
+          <button id="t-ghosts" class="toggle on" aria-pressed="true">Contents</button>
+          <button id="t-box" class="toggle on" aria-pressed="true">Box</button>
+          <button id="t-lift" class="toggle" aria-pressed="false">Lift layers</button>
+          <button id="t-around" class="toggle" title="What's around a tray picked out in its box, and above the layer slider: Pulse (fades, comes back once, then gone; moving pulses it again), Frame (outlines), Shade (left faintly there) or Hide">Around: Pulse</button>
+          <button id="t-lid" class="toggle" aria-pressed="false" hidden>Lid</button>
+          <button id="t-art" class="toggle" aria-pressed="false" hidden>Box art</button>
+          <button id="t-reset" class="toggle">Reset view</button>
+          <button id="t-cut" class="toggle" aria-pressed="false">Cut view</button>
+          <button id="t-measure" class="toggle" aria-pressed="false">Measure</button>
+          <button id="t-motion" class="toggle" aria-pressed="false">Motion</button>
+        </div>
+      </div>
+      <div id="motion-panel" class="motion-panel" hidden></div>
+      <div id="view-note" class="view-note" hidden></div>
+    </section>
+
+    <aside class="panel">
+      <section id="no-box" class="card" hidden></section>
+      <section id="fit" class="card"></section>
+      <section class="card">
+        <h2>Insert <span id="place-count" class="muted"></span></h2>
+        <p class="muted small">Layers, their trays, and the game components in each. Tap a tray to leave changes for the AI agent; open it to rename it or set its colours.</p>
+        <div id="placement"></div>
+      </section>
+      <section class="card">
+        <h2>Layout variants</h2>
+        <div id="variants" class="variants"></div>
+      </section>
+      <section class="card">
+        <h2>Boxes</h2>
+        <div id="boxinfo"></div>
+      </section>
+      <section class="card">
+        <h2>Export</h2>
+        <p class="muted small">Writes one STL per tray (and per inlaid label), a 3MF per box's insert, and <code>&lt;game&gt;-plates.3mf</code>: a Bambu Studio project of the Plates tab, with its plates, names and filament slots, X1C 0.4 mm / 0.20 mm Standard. All to <code>games/&lt;game&gt;/out/</code> on the server; either button writes the lot.</p>
+        <div class="row"><button id="export" class="primary">Export STLs</button><button id="export-3mf" class="primary">Export for Bambu Studio</button></div>
+        <div id="export-out" class="small"></div>
+      </section>
+    </aside>
+  </main>
+  <main id="tab-tray" class="layout" hidden>
+    <!-- The 3D view moves here from the Insert tab while this tab is open. -->
+    <aside id="tray-panel" class="panel"></aside>
+  </main>
+  <main id="tab-plates" class="layout" hidden>
+    <section class="viewer">
+      <canvas id="plate-view" class="plate-canvas" aria-label="3D view of the print plates"></canvas>
+      <div class="view-controls">
+        <div id="plate-pick" class="toggles"></div>
+        <div class="toggles"><button id="plate-reset-view" class="toggle">Reset view</button></div>
+      </div>
+    </section>
+    <aside id="plate-panel" class="panel"></aside>
+  </main>
+  <div id="sheet" class="sheet" hidden>
+    <div class="sheet-panel" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
+      <div class="sheet-head">
+        <h2 id="sheet-title">Mark a face</h2>
+        <button id="sheet-close" class="toggle" aria-label="Close">Done</button>
+      </div>
+      <p id="sheet-dims" class="muted small"></p>
+      <div id="sheet-photos" class="thumbs"></div>
+      <label class="primary file-btn">Add photo
+        <input id="photo-input" type="file" accept="image/*" hidden>
+      </label>
+      <div id="crop" class="crop" hidden>
+        <p class="small">Drag the four corners onto the component's <b id="crop-face-name">top</b>, as it should read:
+          <span class="muted">1 top-left · 2 top-right · 3 bottom-right · 4 bottom-left</span></p>
+        <div id="crop-faces" class="toggles"></div>
+        <div id="crop-stage" class="crop-stage">
+          <img id="crop-img" alt="Photo to crop">
+          <svg id="crop-svg" class="crop-svg"></svg>
+        </div>
+        <div class="toggles">
+          <button id="crop-save" class="primary">Save face</button>
+          <button id="crop-remove" class="toggle">Delete photo</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div id="dialog" class="sheet" hidden>
+    <div class="sheet-panel narrow" role="dialog" aria-modal="true" aria-labelledby="dialog-title">
+      <div class="sheet-head">
+        <h2 id="dialog-title"></h2>
+        <button id="dialog-close" class="toggle" aria-label="Close">Cancel</button>
+      </div>
+      <form id="dialog-form" class="form"></form>
+    </div>
+  </div>
+  <div id="toast" class="toast" hidden></div>
+  <script type="module" src="app.js"></script>
+</body>
+</html>

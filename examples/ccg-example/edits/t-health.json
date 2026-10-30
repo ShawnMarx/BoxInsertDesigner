@@ -1,0 +1,41 @@
+{
+  "added": [
+    {
+      "id": 12,
+      "name": "Fillet1",
+      "text": "Fillet1 (fillet) radius 2 mm on 4 edges",
+      "type": "fillet"
+    }
+  ],
+  "bodies": [
+    {
+      "name": "t-health",
+      "size": [
+        [
+          158.4,
+          41.2,
+          43.8
+        ],
+        [
+          158.4,
+          41.2,
+          43.8
+        ]
+      ],
+      "volume_mm3": [
+        40761.0,
+        40610.0
+      ]
+    }
+  ],
+  "changed": [],
+  "params": [],
+  "removed": [],
+  "saved_ms": 1793368235094,
+  "solidcraft": "v0.27.1",
+  "summary": [
+    "added Fillet1 (fillet) radius 2 mm on 4 edges",
+    "body t-health: volume 40761 → 40610 mm³ (-0.4%)"
+  ],
+  "tray": "t-health"
+}

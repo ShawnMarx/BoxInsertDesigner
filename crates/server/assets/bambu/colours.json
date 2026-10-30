@@ -1,0 +1,24 @@
+{
+  "_about": "Bambu Lab's colours for each filament preset the X1C template has, with the hex codes Bambu gives them (store pages; the same codes Bambu Studio puts in a project). Checked 2026-10-30 against Bambu's store, a Bambu Studio-saved project, and OpenSpoolMobile's list from Bambu's store, except where `unchecked` says otherwise. The app offers these first; any other #rrggbb is still allowed.",
+  "Bambu PLA Matte @BBL X1C": [
+    ["Ivory White", "#FFFFFF"], ["Bone White", "#CBC6B8"], ["Desert Tan", "#E8DBB7"], ["Latte Brown", "#D3B7A7"],
+    ["Caramel", "#AE835B"], ["Terracotta", "#B15533"], ["Dark Brown", "#7D6556"], ["Dark Chocolate", "#4D3324"],
+    ["Lemon Yellow", "#F7D959"], ["Mandarin Orange", "#F99963"], ["Sakura Pink", "#E8AFCF"], ["Lilac Purple", "#AE96D4"],
+    ["Plum", "#950051"], ["Scarlet Red", "#DE4343"], ["Dark Red", "#BB3D43"], ["Apple Green", "#C2E189"],
+    ["Grass Green", "#61C680"], ["Dark Green", "#68724D"], ["Ice Blue", "#A3D8E1"], ["Sky Blue", "#56B7E6"],
+    ["Marine Blue", "#0078BF"], ["Dark Blue", "#042F56"], ["Ash Gray", "#9B9EA0"], ["Nardo Gray", "#757575"],
+    ["Charcoal", "#000000"]
+  ],
+  "Bambu PLA Galaxy @BBL X1C": [
+    ["Purple", "#594177"], ["Green", "#3B665E"], ["Nebulae", "#424379"], ["Brown", "#684A43"]
+  ],
+  "Bambu PLA Sparkle @BBL X1C": [
+    ["Alpine Green Sparkle", "#3F5443"], ["Slate Gray Sparkle", "#8E9089"], ["Royal Purple Sparkle", "#483D8B"],
+    ["Crimson Red Sparkle", "#792B36"], ["Onyx Black Sparkle", "#2D2B28"], ["Classic Gold Sparkle", "#CEA629"]
+  ],
+  "Bambu PLA Metal @BBL X1C": [
+    ["Cobalt Blue Metallic", "#39699E"], ["Oxide Green Metallic", "#1D7C6A"], ["Iridium Gold Metallic", "#B39B84"],
+    ["Copper Brown Metallic", "#AA6443"], ["Iron Gray Metallic", "#43403D"]
+  ],
+  "unchecked": ["Bambu PLA Galaxy @BBL X1C: Green #3B665E (from memory; Bambu's store page couldn't be read)"]
+}

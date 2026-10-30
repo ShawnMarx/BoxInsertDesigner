@@ -1,0 +1,817 @@
+# BoxInsertDesigner game spec: the master copy. Edit through `bid` or the web app;
+# hand edits are fine too (the server picks them up on the next command).
+
+style = "default"
+
+[game]
+name = "CCG example"
+sample = false
+notes = "Box inside 160 x 257 x 62 (157 was a typo for 257: the board is 253 long). The folded board lies on top (8.3 mm top stack). Fits in 2 layers with the lid riding 2.6 mm above the rim (lid lift allowed up to 10 mm). The packer drops to minimum walls and floor (1.6 / 0.8 mm) to fit."
+
+[printer]
+name = "Bambu Lab X1C, 0.4 mm nozzle"
+nozzle = 0.4
+bed = [
+    256.0,
+    256.0,
+]
+max_z = 256.0
+bed_margin = 3.0
+layer_height = 0.2
+line_width = 0.42
+bed_exclude = [[
+    0.0,
+    0.0,
+    18.0,
+    28.0,
+]]
+
+[[sleeves]]
+id = "penny"
+name = "Penny sleeve (thin)"
+per_card_mm = 0.4
+source = "estimate"
+
+[[sleeves]]
+id = "premium"
+name = "Premium sleeve (thick)"
+per_card_mm = 0.55
+source = "estimate"
+
+[[groups]]
+id = "tokens"
+name = "Tokens"
+
+[[groups]]
+id = "health"
+name = "Health and villain"
+
+[[groups]]
+id = "deck-tray"
+name = "Decks"
+
+[[groups]]
+id = "rules"
+name = "Rules and villain cards"
+
+[[components]]
+id = "box"
+name = "Box"
+source = "measured"
+kind = "box"
+inner = [
+    160.0,
+    257.0,
+    62.0,
+]
+lid_depth = 0.0
+lid_lift = 10.0
+top_stack = 8.3
+
+[[components.photos]]
+file = "box-1793144354783.jpg"
+note = "Inner box long side"
+
+[[components.photos]]
+file = "box-1793144372987.jpg"
+note = "Inner box short side"
+
+[[components.photos]]
+file = "box-1793144392687.jpg"
+note = "Box top"
+
+[[components.photos]]
+file = "box-1793144409230.jpg"
+note = "Box long side"
+
+[[components.photos]]
+file = "box-1793144423143.jpg"
+note = "Box short side"
+
+[components.faces.front]
+photo = "box-1793144409230.jpg"
+corners = [
+    [
+    0.338,
+    0.855,
+],
+    [
+    0.344,
+    0.07,
+],
+    [
+    0.593,
+    0.07,
+],
+    [
+    0.596,
+    0.855,
+],
+]
+
+[components.faces.lid]
+photo = "box-1793144392687.jpg"
+corners = [
+    [
+    0.274,
+    0.161,
+],
+    [
+    0.778,
+    0.159,
+],
+    [
+    0.793,
+    0.794,
+],
+    [
+    0.255,
+    0.794,
+],
+]
+
+[components.faces.side]
+photo = "box-1793144423143.jpg"
+corners = [
+    [
+    0.622,
+    0.087,
+],
+    [
+    0.622,
+    0.8,
+],
+    [
+    0.244,
+    0.8,
+],
+    [
+    0.264,
+    0.087,
+],
+]
+
+[components.layout]
+strategy = "by-group"
+
+[[components.layout.tweaks]]
+tray = "t-deck-tray"
+holders = true
+grips = true
+pocket_labels = false
+
+[components.layout.tweaks.pockets.decks.notch]
+width = 30.0
+keep = 0.0
+floor = 15.0
+
+[[components.layout.tweaks.log]]
+id = "r1793148985658"
+text = """
+This is the biggest issue with the design. The card holes at the bottom make sense for the upper rules tray, but not a deck card stack. 
+
+See if you can design such as this with inner trays per deck so the whole thing doesn’t need to come out.
+
+https://makerworld.com/en/models/1076662-forest-shuffle-custom-insert-base-expansions"""
+status = "done"
+created_ms = 1793148985658
+updated_ms = 1793152578139
+reply = "Reworked after your note on usability: the decks now sit in a floorless outer frame (158 x 214) with a lift-out holder per deck (73 x 96, 1.6 mm walls, open ends, floor window). Between the two rows of decks there's an 18.5 mm finger slot, and between the columns an 8.4 mm one, both cut down to a low bar so you can grip a holder's walls or a deck's end. The holders stand on the box floor, so the lid still sits only 2.6 mm high. Setting: 'Frame with holders' on this tray."
+read_ms = 1793362445323
+
+[[components.layout.tweaks]]
+tray = "t-health"
+pocket_labels = true
+
+[components.layout.tweaks.pockets.health-dials]
+scoop = false
+
+[components.layout.tweaks.pockets.health-dials.notch]
+width = 30.0
+keep = 5.0
+
+[components.layout.tweaks.pockets.villain-health-stand]
+scoop = false
+fill_spare = true
+
+[components.layout.tweaks.pockets.villain-health-stand.notch]
+width = 30.0
+keep = 5.0
+
+[[components.layout.tweaks.log]]
+id = "r1793149122137"
+text = "To make room if the cards need it, laying these sideways I think would probably help. We can just have an open filler space for the stand to go into."
+status = "done"
+created_ms = 1793149122137
+updated_ms = 1793149744423
+reply = "Done: the three dials now stand on edge side by side, in an 83 x 38 bin 40 mm deep (was 84 x 42 stacked flat). The stand gets an open 58 x 36 space at full depth beside them, plus the spare room left at the end of the tray. The tray is 158 x 52, which makes room for the deck holders. Everything still fits with the lid 2.6 mm high."
+read_ms = 1793362173513
+
+[[components.layout.tweaks.log]]
+id = "r1793364930744"
+text = "The Health dials bin should not have a curved bottom. Instead, there should be a 30 mm gap at the center on both sides from the top down to 5 mm above the floor."
+status = "done"
+created_ms = 1793364930744
+updated_ms = 1793365146253
+reply = "Done. The Health dials bin now has a flat floor (no scoop). A 30 mm slot runs through both long side walls at the bin's centre (x 28–58 mm), from the top down to 5 mm above the floor (7 mm up from the tray's base), so you can pinch the dials out. Nothing else in the tray changed: the stand and spare still have their scoops, the 'Health dials' floor label stays, and the tray is still 158 x 41 x 44. New per-bin settings: tweak_tray pocket=health-dials scoops=false notch=30 notch_keep=5."
+read_ms = 1793365256729
+
+[[components.layout.tweaks.log]]
+id = "r1793365327464"
+text = "For the villain stand - remove the empty bin and combine the two as one bin. No fillet bottom. Same 30mm style gaps as with health dial."
+status = "done"
+created_ms = 1793365327464
+updated_ms = 1793365440507
+reply = "Done. The empty spare bin is gone: the Villain Health stand's bin now runs to the end of the tray, 70.6 x 38 mm (was 58 x 38, plus an 11 mm spare). Its floor is flat (no scoop), and it has the same 30 mm slot through both long walls at its centre (x 106-137 mm), down to 5 mm above its floor. Bonus: its floor now has room for its label, 'Villain Health stand' at 5.5 mm. The tray's size is unchanged. New per-bin setting: fill_spare (take the leftover room instead of a spare)."
+read_ms = 1793365580783
+
+[[components.layout.tweaks.log]]
+id = "r1793365594477"
+text = "Relabel villain health stand as just stands"
+status = "done"
+created_ms = 1793365594477
+updated_ms = 1793365966680
+reply = "Done: the stand's pocket floor now reads 'Stands' (was 'Villain Health stand'). It fits at the full 8 mm capitals, 36 x 9 mm centred in the 69 x 36 mm clear floor, inlaid 0.6 mm like 'Health dials' beside it. The component's name is unchanged, so the app still lists it as Villain Health stand."
+read_ms = 1793367494923
+
+[[components.layout.tweaks.log]]
+id = "r1793368279723"
+text = """
+Edited in SolidCraft (edit_diff has the details); make the tray do this:
+- added Fillet1 (fillet) radius 2 mm on 4 edges
+- body t-health: volume 40761 → 40610 mm³ (-0.4%)
+
+All my tray outer four corners should have this same fillet"""
+status = "done"
+created_ms = 1793368279723
+updated_ms = 1793368746419
+reply = "Done, and on every tray: a new style rule (walls.corner_radius = 2 mm) rounds each tray's four outer vertical corners, as your SolidCraft edit did on this one. All 8 of this game's trays and the sample game's now build with 2 mm corners, and the layout still fits. On these 1.6 mm walls that leaves 1.43 mm at a pocket's square corner, above the 1.2 absolute minimum; the radius only shrinks on a tray whose walls are too thin to allow it. Change it with set_style walls.corner_radius=..."
+read_ms = 1793368779026
+
+[[components.layout.tweaks]]
+tray = "t-tokens"
+half_circle = "middle"
+pocket_labels = true
+order = [
+    "5-token",
+    "3-tokens",
+    "1-tokens",
+    "health-tracker",
+]
+
+[components.layout.tweaks.request]
+id = "r1793368695844"
+text = "I want this tray and the rules, villain cards tray to extend the full length of the box. they look just short"
+status = "declined"
+created_ms = 1793368695844
+updated_ms = 1793369047579
+reply = "Left at 250 mm, as you chose in the session: that is the longest tray the packer allows on the X1C bed with 3 mm clear of each edge, so Tokens and Rules and villain cards stop 5.4 mm short of the box's 255.4 mm. Printing to 0.3 mm from the bed edge would close the gap; ask if you want that later."
+
+[[components.layout.tweaks.log]]
+id = "a1793293457355"
+text = "Add stencil text labels to the trays, this game as the test game: inlaid (own filament) and just cut."
+status = "done"
+created_ms = 1793293457355
+updated_ms = 1793293457355
+reply = "Labels inlaid in white (slot 2): 'Tokens' on top and each bin's name on its floor. Later reworked by your note."
+direct = true
+
+[[components.layout.tweaks.log]]
+id = "r1793291371300"
+text = """
+On the -1 tokens, I don’t think making a narrower bin is right. Wider is better as it is easier to grab. When the full space isn’t needed -  better to keep the width and make it a little less deep instead.
+
+Also, remove the middle generic tokens label
+
+Make the token labels just be their values
+
+Make the -1 tokens adj to the center instead of outer bin"""
+status = "done"
+created_ms = 1793291371300
+updated_ms = 1793291905563
+reply = "Done. The -1 bin is now full width (40 mm, like the others) and 10.5 mm deep instead of 12, so it holds the same. It sits next to the grab holes, so the order is -5, -3, grab holes, -1, Health tracker. The 'Tokens' label on top is gone, and the floors now read just -5, -3 and -1, inlaid at 8 mm. This is a general rule now: a bin narrower than its neighbours gets widened and made shallower. The Rules tray label is inlaid too, following your rule that labels printed flat get inlaid."
+read_ms = 1793298515314
+
+[[components.layout.tweaks]]
+tray = "t-rules"
+half_circle = "rules-and-villain-large-card-stack"
+label = "Rules & villain cards"
+
+[[components.layout.tweaks.log]]
+id = "a1793293457401"
+text = "Use the filled method when the label prints in a horizontal layer; engraved alone only for a vertically printed stencil."
+status = "done"
+created_ms = 1793293457401
+updated_ms = 1793293457401
+reply = "'Rules & villain cards' on the top switched from cut to inlaid (white, slot 2), 6.7 mm capitals."
+direct = true
+
+[[components.layout.tweaks]]
+tray = "*"
+
+[[components.layout.tweaks.log]]
+id = "r1793369177158"
+text = "Remove the labels on the deck boxes"
+status = "done"
+created_ms = 1793369177158
+updated_ms = 1793369205615
+reply = "Done: the four deck holders (Decks 1/4 to 4/4) no longer have labels; pocket labels are off on the deck frame. The other trays keep theirs (Health dials, Stands, Rules & villain cards, -5/-3/-1), and the layout still fits."
+read_ms = 1793369512007
+
+[[components.layout.tweaks.log]]
+id = "r1793370061485"
+text = "For the deck boxes, let's make the lip grips be on the tops and bottoms (so going towards the wider gap in the outer tray). This will give a bit more grabbing room. On the edges the grab lips were on previously, let's make card draw slots for both sides. This is 30mm wide gaps from the top, all the way to the bottom. Make the bottom have an inner eclipsed gap coming in (see Anachrony tray for the pioneer cards). No need for the bottom gap that currently exists in them."
+status = "done"
+created_ms = 1793370061485
+updated_ms = 1793371212566
+reply = "Done on all four deck holders. Lips: now on the end walls, facing the 12.7 mm gap between holders (the wider one; the side gap is 9 mm), 25 mm long and 4 mm deep. Card-draw slots: 30 mm wide, top to bottom, through both long walls where the lips were. Floor: the slots continue through it into a half-circle bite 14.75 mm deep, like the pioneer tray, and the old floor window is gone. The bite is 0.5 mm narrower than the slot: a bite exactly as wide, or elliptical, gives SolidCraft a broken mesh. Everything still fits, and the export passes the print checks. Set with tweak_tray tray=t-deck-tray pocket=decks notch=30 notch_keep=0 notch_floor=15."
+read_ms = 1793373033587
+
+[[components]]
+id = "decks"
+name = "Decks"
+group = "deck-tray"
+source = "measured"
+notes = "They should go in flat into the box. Four decks, 41 mm each, each in its own card holder (open ends, floor window) that lifts out alone."
+kind = "cards"
+size = [
+    68.0,
+    94.0,
+]
+count = 4
+stack = 164.0
+
+[[components.photos]]
+file = "decks-1793144947504.jpg"
+note = "Card for player deck"
+
+[[components.photos]]
+file = "decks-1793144980180.jpg"
+note = "Card for villain deck"
+
+[[components.photos]]
+file = "decks-1793145053333.jpg"
+note = "4 card stacks set in box"
+
+[components.faces.top]
+photo = "decks-1793144947504.jpg"
+corners = [
+    [
+    0.126,
+    0.194,
+],
+    [
+    0.76,
+    0.172,
+],
+    [
+    0.782,
+    0.828,
+],
+    [
+    0.163,
+    0.856,
+],
+]
+
+[components.measure]
+of = "stack"
+stack = [
+    68.0,
+    94.0,
+    41.0,
+]
+count = 4
+shape = "rect"
+
+[[components]]
+id = "board-folded-up"
+name = "Board Folded up"
+source = "measured"
+notes = "Top. Lies loose on top of the insert (8.3 mm top stack)."
+kind = "as_is"
+
+[[components.photos]]
+file = "board-folded-up-1793145207565.jpg"
+note = "Board top"
+
+[components.faces.top]
+photo = "board-folded-up-1793145207565.jpg"
+corners = [
+    [
+    0.133,
+    0.117,
+],
+    [
+    0.7,
+    0.106,
+],
+    [
+    0.756,
+    0.861,
+],
+    [
+    0.13,
+    0.867,
+],
+]
+
+[components.measure]
+of = "piece"
+piece = [
+    152.0,
+    253.0,
+    8.3,
+]
+
+[[components]]
+id = "1-tokens"
+name = "-1 tokens"
+group = "tokens"
+source = "measured"
+notes = "Together with other tokens to pull out on table each in own loose bin of one tray. Scoop bin 12 mm deep (cut from 18 to keep the lid lift at 2.6 mm), in the Tokens tray."
+label = "-1"
+kind = "bin"
+size = [
+    45.0,
+    35.0,
+]
+depth = 12.0
+
+[[components.photos]]
+file = "1-tokens-1793145412399.jpg"
+note = "Single token"
+
+[components.faces.top]
+photo = "1-tokens-1793145412399.jpg"
+corners = [
+    [
+    0.382,
+    0.544,
+],
+    [
+    0.59,
+    0.544,
+],
+    [
+    0.59,
+    0.702,
+],
+    [
+    0.382,
+    0.702,
+],
+]
+
+[components.measure]
+of = "piece"
+piece = [
+    12.75,
+    12.75,
+    1.8,
+]
+count = 24
+shape = "round"
+
+[[components]]
+id = "5-token"
+name = "-5 Token"
+group = "tokens"
+source = "measured"
+notes = "Together with other tokens to pull out on table each in own loose bin of one tray. Scoop bin 12 mm deep (cut from 18 to keep the lid lift at 2.6 mm), in the Tokens tray."
+label = "-5"
+goes_with = ["1-tokens"]
+kind = "bin"
+size = [
+    45.0,
+    40.0,
+]
+depth = 12.0
+
+[[components.photos]]
+file = "5-token-1793145520882.jpg"
+note = "Single token -5"
+
+[components.faces.top]
+photo = "5-token-1793145520882.jpg"
+corners = [
+    [
+    0.418,
+    0.372,
+],
+    [
+    0.684,
+    0.372,
+],
+    [
+    0.684,
+    0.569,
+],
+    [
+    0.418,
+    0.569,
+],
+]
+
+[components.measure]
+of = "piece"
+piece = [
+    19.9,
+    19.9,
+    1.8,
+]
+count = 12
+shape = "round"
+
+[[components]]
+id = "3-tokens"
+name = "-3 Tokens"
+group = "tokens"
+source = "measured"
+notes = "Together with other tokens to pull out on table each in own loose bin of one tray. Scoop bin 12 mm deep (cut from 18 to keep the lid lift at 2.6 mm), in the Tokens tray."
+label = "-3"
+goes_with = [
+    "1-tokens",
+    "5-token",
+]
+kind = "bin"
+size = [
+    45.0,
+    40.0,
+]
+depth = 12.0
+
+[[components.photos]]
+file = "3-tokens-1793145647065.jpg"
+note = "Single -3 token"
+
+[components.faces.top]
+photo = "3-tokens-1793145647065.jpg"
+corners = [
+    [
+    0.453,
+    0.544,
+],
+    [
+    0.616,
+    0.544,
+],
+    [
+    0.616,
+    0.667,
+],
+    [
+    0.453,
+    0.667,
+],
+]
+
+[components.measure]
+of = "piece"
+piece = [
+    17.9,
+    17.9,
+    1.8,
+]
+count = 18
+shape = "round"
+
+[[components]]
+id = "health-tracker"
+name = "Health tracker"
+group = "tokens"
+source = "measured"
+notes = "Can be together or separate with other tokens. Put with the tokens: scoop bin 45 x 40 x 12 in the Tokens tray (4 trackers stack 10.8 mm)."
+kind = "bin"
+size = [
+    45.0,
+    40.0,
+]
+depth = 12.0
+
+[[components.photos]]
+file = "health-tracker-1793145752264.jpg"
+note = "Health tracker"
+
+[components.faces.top]
+photo = "health-tracker-1793145752264.jpg"
+corners = [
+    [
+    0.347,
+    0.472,
+],
+    [
+    0.723,
+    0.472,
+],
+    [
+    0.723,
+    0.761,
+],
+    [
+    0.347,
+    0.761,
+],
+]
+
+[components.measure]
+of = "piece"
+piece = [
+    29.8,
+    29.8,
+    2.7,
+]
+count = 4
+shape = "round"
+
+[[components]]
+id = "health-dials"
+name = "Health dials"
+group = "health"
+source = "measured"
+notes = "Together set of 3 in one bin. Standing on edge, side by side (83 x 38, 40 deep), per your request, to make room for the deck holders."
+kind = "bin"
+size = [
+    83.0,
+    38.0,
+]
+depth = 40.0
+
+[[components.photos]]
+file = "health-dials-1793145911815.jpg"
+note = "Health dial single"
+
+[components.faces.top]
+photo = "health-dials-1793145911815.jpg"
+corners = [
+    [
+    0.323,
+    0.191,
+],
+    [
+    0.708,
+    0.191,
+],
+    [
+    0.708,
+    0.802,
+],
+    [
+    0.323,
+    0.802,
+],
+]
+
+[components.measure]
+of = "piece"
+piece = [
+    81.0,
+    39.0,
+    12.0,
+]
+count = 3
+shape = "irregular"
+
+[[components]]
+id = "rules-and-villain-large-card-stack"
+name = "Rules and villain large card stack"
+group = "rules"
+source = "measured"
+notes = "In a single tray. Own tray on layer 2, over the decks (group Rules and villain cards)."
+kind = "cards"
+size = [
+    110.0,
+    170.0,
+]
+stack = 11.0
+
+[[components.photos]]
+file = "rules-and-villain-large-card-stack-1793146103625.jpg"
+note = "Rules and villain large cards"
+
+[components.faces.top]
+photo = "rules-and-villain-large-card-stack-1793146103625.jpg"
+corners = [
+    [
+    0.196,
+    0.278,
+],
+    [
+    0.753,
+    0.267,
+],
+    [
+    0.782,
+    0.856,
+],
+    [
+    0.193,
+    0.856,
+],
+]
+
+[components.measure]
+of = "piece"
+piece = [
+    110.0,
+    170.0,
+    11.0,
+]
+
+[[components]]
+id = "villain-health-stand"
+name = "Villain Health stand"
+group = "health"
+source = "measured"
+notes = "An open full-depth space beside the dials for the stand to drop into."
+label = "Stands"
+kind = "bin"
+size = [
+    58.0,
+    36.0,
+]
+depth = 40.0
+
+[[components.photos]]
+file = "villain-health-stand-1793146390418.jpg"
+note = "Stand side"
+
+[[components.photos]]
+file = "villain-health-stand-1793146404725.jpg"
+note = "Stand face"
+
+[[components.photos]]
+file = "villain-health-stand-1793146427715.jpg"
+note = "Stand upright "
+
+[components.faces.top]
+photo = "villain-health-stand-1793146404725.jpg"
+corners = [
+    [
+    0.323,
+    0.264,
+],
+    [
+    0.637,
+    0.267,
+],
+    [
+    0.607,
+    0.624,
+],
+    [
+    0.351,
+    0.617,
+],
+]
+
+[components.measure]
+of = "piece"
+piece = [
+    56.0,
+    31.0,
+    3.6,
+]
+count = 1
+shape = "irregular"
+
+[[components.measure.extra]]
+label = "Stand bottom length"
+mm = 33.0
+
+[[components.measure.extra]]
+label = "Height if including stand face to bottom"
+mm = 22.0
+
+[[plates]]
+piece = "box/t-rules"
+plate = 3
+filament = 1
+
+[plates.parts]
+Label = 2
+"Rules and villain cards" = 1
+
+[[plates]]
+piece = "box/t-deck-tray"
+plate = 2
+
+[[plates]]
+piece = "box/t-tokens"
+
+[plates.parts]
+Label = 2
+
+[[plates]]
+piece = "box/t-health"
+
+[plates.parts]
+Label = 2
+
+[[filaments]]
+preset = "Bambu PLA Matte @BBL X1C"
+color = "#000000"
+
+[[filaments]]
+preset = "Bambu PLA Matte @BBL X1C"
+color = "#FFFFFF"

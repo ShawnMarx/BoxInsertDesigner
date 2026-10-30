@@ -1,0 +1,8 @@
+target/
+.DS_Store
+/upstream/
+# Your games folder is its own repository, versioned by the server; bid.toml and your own
+# CLAUDE.md live there too.
+/games/
+# Personal Claude Code notes (e.g. `@games/CLAUDE.md`).
+CLAUDE.local.md

@@ -1,0 +1,49 @@
+# Build style guide: the standards every insert is generated against. The user's values unless
+# listed in `proposed` (Claude's starting guesses). All in mm. Edit with `bid set_style`.
+
+name = "default"
+proposed = [
+    "heavy_cards_mm",
+    "printed_box.wall",
+    "printed_box.floor",
+    "printed_box.lid_groove",
+    "printed_box.slide_gap",
+    "printed_box.detent",
+    "labels.min_height",
+    "labels.margin",
+]
+max_overhang_deg = 45.0
+heavy_cards_mm = 40.0
+
+[tolerance]
+print_to_component = 0.8
+print_to_print = 0.1
+
+[walls]
+normal = 2.0
+min = 1.6
+absolute_min = 1.2
+max = 3.0
+corner_radius = 2.0
+
+[floor]
+normal = 2.0
+min = 2.0
+
+[printed_box]
+wall = 3.0
+floor = 1.6
+lid_groove = 1.2
+slide_gap = 0.2
+detent = 0.4
+
+[grips]
+half_circle = 25.0
+lip_length = 30.0
+lip_depth = 4.0
+
+[labels]
+depth = 0.6
+height = 8.0
+min_height = 4.0
+margin = 1.0

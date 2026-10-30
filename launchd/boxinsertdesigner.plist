@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Template: run the server as a macOS LaunchAgent. Replace /path/to/BoxInsertDesigner and the
+     label (it must match [service] label in your bid.toml), copy to ~/Library/LaunchAgents/, then
+     launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/<label>.plist -->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.example.boxinsertdesigner</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/path/to/BoxInsertDesigner/target/release/bid-server</string>
+  </array>
+
+  <!-- The server reads games/bid.toml from here, and writes specs and outputs under it. -->
+  <key>WorkingDirectory</key>
+  <string>/path/to/BoxInsertDesigner</string>
+
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <true/>
+
+  <key>StandardOutPath</key>
+  <string>/tmp/box-insert-designer.log</string>
+  <key>StandardErrorPath</key>
+  <string>/tmp/box-insert-designer.log</string>
+</dict>
+</plist>

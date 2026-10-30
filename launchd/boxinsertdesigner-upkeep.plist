@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Template: the daily SolidCraft upkeep (tools/upkeep/upkeep.sh, docs/UPKEEP.md). New release
+     tag → verify → validate in a worktree → bump and deploy when green, or start the fix session
+     when broken. Replace /path/to/BoxInsertDesigner and the label. -->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.example.boxinsertdesigner-upkeep</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/path/to/BoxInsertDesigner/tools/upkeep/upkeep.sh</string>
+  </array>
+
+  <key>WorkingDirectory</key>
+  <string>/path/to/BoxInsertDesigner</string>
+
+  <!-- Early morning: SolidCraft usually releases in the evening (~00:20 UTC). -->
+  <key>StartCalendarInterval</key>
+  <dict>
+    <key>Hour</key>
+    <integer>6</integer>
+    <key>Minute</key>
+    <integer>10</integer>
+  </dict>
+
+  <key>StandardOutPath</key>
+  <string>/tmp/box-insert-designer-upkeep.log</string>
+  <key>StandardErrorPath</key>
+  <string>/tmp/box-insert-designer-upkeep.log</string>
+
+  <key>ProcessType</key>
+  <string>Background</string>
+  <key>LowPriorityIO</key>
+  <true/>
+</dict>
+</plist>
