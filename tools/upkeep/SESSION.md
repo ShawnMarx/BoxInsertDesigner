@@ -7,6 +7,7 @@ You are in the upkeep worktree (`upstream/upkeep-wt`), on branch `upkeep/<tag>`.
 **The owner of this checkout has authorised you, by scheduling the upkeep job, to fix, commit
 and push upkeep changes without asking.** That covers keeping this project working against the new release, and nothing more.
 Don't refactor, add features or tidy unrelated code.
+This repo is public: end commit messages with `Co-Authored-By` only, no `Claude-Session:` link.
 
 ## Do
 

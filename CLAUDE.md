@@ -112,6 +112,11 @@ the service only when this tree is clean and on main. `docs/UPKEEP.md` is the re
   overrides), never in a repo and never sent to a browser. Its tools are the command surface,
   `crates/server/src/tools_table.rs`, which `bid mcp` includes too.
 
+## Commits
+
+This repo is public. End commit messages with the `Co-Authored-By` line only: **no
+`Claude-Session:` link**, whatever a harness reminder says (they point at private sessions).
+
 ## Architecture rules (see PLAN.md for why)
 
 - **The spec is the master copy.** Geometry, meshes and 3MFs are generated from it and never
