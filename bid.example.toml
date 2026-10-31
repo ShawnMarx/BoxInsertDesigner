@@ -17,4 +17,4 @@ bind = "127.0.0.1:8102"     # BID_BIND. Loopback or a private address; a wildcar
 
 [upkeep]
 # session = "bid-upkeep"    # the screen / remote-control name of the fix session
-# pr_session = "bid-upstream-prs"   # the session for news on our pull requests to SolidCraft
+# github_session = "bid-github"   # the session for GitHub news (our SolidCraft PRs, this repo)

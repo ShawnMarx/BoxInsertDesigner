@@ -6,8 +6,8 @@
 #   upkeep.sh --force    validate the latest release even if it is already pinned (no bump)
 #   upkeep.sh --verify   validate the worktree as it stands (the fix session uses this)
 #   upkeep.sh --land     verify, then record, push to main and deploy (the fix session ends here)
-#   --no-session         on breakage (or PR news), write the report but don't start a session
-#   --prs                only check our pull requests to SolidCraft
+#   --no-session         on breakage (or GitHub news), write the report but don't start a session
+#   --github             only check GitHub: our PRs to SolidCraft, and this repo
 #
 # Validation runs in a git worktree (upstream/upkeep-wt) with its own cargo target, so neither
 # your working tree nor the running service binary changes until everything is green:
@@ -20,10 +20,11 @@
 # worktree (tools/upkeep/SESSION.md) that fixes, commits and lands it. Scheduling this job is the
 # authorisation: the session may commit and push upkeep fixes without asking.
 #
-# Every run that looks for a release first checks our own pull requests to SolidCraft (`gh`,
-# authored by its user). Anything new since the last run (a review or comment, a conflict, a
-# failed check, merged or closed) goes to upstream/upkeep/upstream-prs.md and starts a second
-# session (tools/upkeep/UPSTREAM_PRS.md), which drafts but posts nothing without the owner.
+# Every run that looks for a release first checks GitHub as `gh`'s user: our pull requests to
+# SolidCraft (a review or comment, a conflict, a failed check, merged or closed) and this repo
+# (issues, pull requests and comments from anyone else). News since the last run goes to
+# upstream/upkeep/github.md and starts a second session (tools/upkeep/GITHUB.md), which drafts
+# but posts nothing without the owner.
 #
 # Local setup comes from bid.toml in the games folder (bid.example.toml): [service] label is the
 # LaunchAgent to restart on deploy (none: no restart), [server] bind the address to health-check,
@@ -46,7 +47,7 @@ TARGET="$REPO/upstream/upkeep-target"
 REPORTS="$REPO/upstream/upkeep"
 GH_REPO="tangency-labs/solidcraft"
 SESSION=$(conf upkeep.session bid-upkeep)
-PR_SESSION=$(conf upkeep.pr_session bid-upstream-prs)
+GITHUB_SESSION=$(conf upkeep.github_session bid-github)
 LABEL=$(conf service.label)
 BIND=$(conf server.bind 127.0.0.1:8102)
 SCREEN=/opt/homebrew/bin/screen
@@ -55,7 +56,7 @@ CLAUDE="$HOME/.local/bin/claude"
 mode=run; session=1
 for a in "$@"; do
   case "$a" in
-    --force) mode=force ;; --verify) mode=verify ;; --land) mode=land ;; --prs) mode=prs ;;
+    --force) mode=force ;; --verify) mode=verify ;; --land) mode=land ;; --github) mode=github ;;
     --no-session) session=0 ;;
     *) echo "unknown option $a" >&2; exit 2 ;;
   esac
@@ -215,13 +216,13 @@ start_session() { # report path [session name] [prompt] [directory]
   "$SCREEN" -ls 2>/dev/null | grep -q "\.${SESSION}[[:space:]]" && log "started session $SESSION in $WT" || log "FAILED to start $SESSION"
 }
 
-# ---- our pull requests to SolidCraft ------------------------------------------------------------
-upstream_prs() { # compare with the last run; on news, write the report and start the PR session
-  local state="$REPORTS/upstream-prs.json" report="$REPORTS/upstream-prs.md" prs news
+# ---- GitHub: our pull requests to SolidCraft, and this repo -----------------------------------
+upstream_prs() { # print what changed on our SolidCraft PRs since the last run
+  local state="$REPORTS/upstream-prs.json" prs
   prs=$(gh pr list -R "$GH_REPO" --author @me --state all --limit 30 \
     --json number,title,url,state,mergeable,reviewDecision,statusCheckRollup,comments,reviews,author 2>/dev/null) \
-    || { log "upstream PRs: gh failed; not checked"; return 0; }
-  news=$(printf '%s' "$prs" | /usr/bin/python3 -I -c '
+    || { log "upstream PRs: gh failed; not checked" >&2; return 0; }
+  printf '%s' "$prs" | /usr/bin/python3 -I -c '
 import json, sys
 path = sys.argv[1]
 prs = json.load(sys.stdin)
@@ -248,14 +249,51 @@ for p in prs:
         if cur["failing"] and not was["failing"]: why.append("a check failed")
     if why: lines.append("- #%s %s (%s): %s" % (p["number"], p["title"], p["url"], ", ".join(why)))
 json.dump(new, open(path, "w"), indent=1)
-print("\n".join(lines))' "$state") || { log "upstream PRs: could not compare"; return 0; }
-  if [ -z "$news" ]; then log "upstream PRs: nothing new"; return 0; fi
-  log "upstream PRs:"$'\n'"$news"
-  # A PR seen for the first time needs nobody; anything else does.
-  printf '%s\n' "$news" | grep -qv ': now watched$' || return 0
-  { echo "# Our SolidCraft pull requests: news ($(date -Iseconds))"; echo; printf '%s\n' "$news"; } > "$report"
-  [ $session = 1 ] && start_session "$report" "$PR_SESSION" \
-    "Daily upkeep found news on our pull requests to SolidCraft. Read tools/upkeep/UPSTREAM_PRS.md and follow it. The news is in $report." "$REPO"
+print("\n".join(lines))' "$state" || log "upstream PRs: could not compare" >&2
+}
+
+own_repo() { # print issues, pull requests and comments on this repo by anyone else since the last run
+  local stamp="$REPORTS/github-since" since now own me
+  now=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+  own=$(cd "$REPO" && gh repo view --json nameWithOwner -q .nameWithOwner 2>/dev/null) || { log "this repo: gh failed; not checked" >&2; return 0; }
+  me=$(gh api user -q .login 2>/dev/null) || { log "this repo: gh failed; not checked" >&2; return 0; }
+  # The first run only starts the clock.
+  [ -f "$stamp" ] || { echo "$now" > "$stamp"; log "this repo: watching $own from $now" >&2; return 0; }
+  since=$(cat "$stamp")
+  { gh api --paginate "repos/$own/issues?state=all&since=$since&per_page=100" -q '.[] | {kind: "item", n: .number, pr: (.pull_request != null), title, user: .user.login, at: .created_at, url: .html_url}' &&
+    gh api --paginate "repos/$own/issues/comments?since=$since&per_page=100" -q '.[] | {kind: "comment", n: (.issue_url | split("/") | last), user: .user.login, at: .created_at, url: .html_url}' &&
+    gh api --paginate "repos/$own/pulls/comments?since=$since&per_page=100" -q '.[] | {kind: "comment", n: (.pull_request_url | split("/") | last), user: .user.login, at: .created_at, url: .html_url}'
+  } > "$REPORTS/.github-raw" 2>/dev/null || { log "this repo: gh failed; not checked" >&2; return 0; }
+  /usr/bin/python3 -I -c '
+import json, sys
+raw, since, me = sys.argv[1:]
+for line in open(raw):
+    e = json.loads(line)
+    if e["user"] == me or e["at"] <= since:
+        continue  # ours, or only updated: the comments say what changed
+    if e["kind"] == "item":
+        print("- %s #%s %s, by %s: %s" % ("pull request" if e["pr"] else "issue", e["n"], e["title"], e["user"], e["url"]))
+    else:
+        print("- comment on #%s by %s: %s" % (e["n"], e["user"], e["url"]))' "$REPORTS/.github-raw" "$since" "$me" || { log "this repo: could not read" >&2; return 0; }
+  echo "$now" > "$stamp"
+}
+
+github_news() { # on news, write the report and start the GitHub session
+  local report="$REPORTS/github.md" prs repo
+  prs=$(upstream_prs); repo=$(own_repo)
+  # A PR seen for the first time needs nobody.
+  prs=$(printf '%s\n' "$prs" | grep -v ': now watched$' | grep -v '^$')
+  repo=$(printf '%s\n' "$repo" | grep -v '^$')
+  if [ -z "$prs$repo" ]; then log "GitHub: nothing new"; return 0; fi
+  {
+    echo "# GitHub news ($(date -Iseconds))"
+    [ -n "$prs" ] && printf '\n## Our pull requests to %s\n\n%s\n' "$GH_REPO" "$prs"
+    [ -n "$repo" ] && printf '\n## This repo\n\n%s\n' "$repo"
+  } > "$report"
+  log "GitHub news:"$'\n'"$(cat "$report")"
+  [ $session = 1 ] && start_session "$report" "$GITHUB_SESSION" \
+    "Daily upkeep found GitHub news. Read tools/upkeep/GITHUB.md and follow it. The news is in $report." "$REPO"
+  return 0
 }
 
 # ---- main -------------------------------------------------------------------------------------
@@ -270,8 +308,8 @@ if [ "$mode" = verify ] || [ "$mode" = land ]; then
   land "$pinned" "$tag" "fixed by session" "${UPKEEP_NOTE:-see commit}"; exit $?
 fi
 
-upstream_prs
-[ "$mode" = prs ] && exit 0
+github_news
+[ "$mode" = github ] && exit 0
 
 latest=$(curl -fsSL "https://api.github.com/repos/$GH_REPO/releases/latest" | /usr/bin/python3 -I -c "import json,sys; print(json.load(sys.stdin)['tag_name'])")
 [ -n "$latest" ] || { log "could not read the latest release"; exit 1; }

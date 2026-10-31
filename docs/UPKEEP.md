@@ -9,9 +9,10 @@ every game through both geometry paths with each STL checked.
 - **broken:** a Claude session (`tools/upkeep/SESSION.md`) fixes it and lands it, or marks it
   `blocked` for the owner.
 
-Each run also checks our own pull requests to SolidCraft first. News on one goes to
-`upstream/upkeep/upstream-prs.md` and starts a session (`tools/upkeep/UPSTREAM_PRS.md`) that
-drafts the reply and waits for the owner. Merged ones are recorded in PLAN.md.
+Each run also checks GitHub first: our pull requests to SolidCraft, and this repo's issues,
+pull requests and comments from others. News goes to `upstream/upkeep/github.md` and starts a
+session (`tools/upkeep/GITHUB.md`) that drafts the reply and waits for the owner. Merged PRs to
+SolidCraft are recorded in PLAN.md.
 
 Days with no new release only go to `~/Library/Logs/box-insert-designer-upkeep.log`.
 
