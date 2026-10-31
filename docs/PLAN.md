@@ -431,6 +431,23 @@ SolidCraft with changes going back and forth between the agent and the app. Deci
       Done 2026-10-30: public from `2929246`; old history in `BoxInsertDesigner-archive` (private,
       archived; the local remote `archive`)
 
+### M11 — Beyond the Mac, and being seen
+- [ ] Windows: branch `windows` (3dc2537) builds on SolidCraft's portable Windows package
+      (`windows_*` pins in upstream.toml, moved by upkeep), `tools/fetch-solidcraft.ps1`, agent
+      settings in `%APPDATA%`. Not yet built or run on Windows: Shawn is testing on
+      desktop-81qh677 (2026-10-30), and that session writes `docs/WINDOWS.md` on the branch.
+      Then merge, and change "requires macOS" in the README and on the BGE page to what's true
+- [ ] Linux: same shape (SolidCraft's Linux packages probably carry the CLI; unchecked)
+- [ ] SolidCraft visibility, after Windows is tested and the MakerWorld post is up: README
+      "Built on SolidCraft" plus "independent, not affiliated with or endorsed by Tangency Labs"
+      (their DISCLAIMER.md); GitHub topics (solidcraft, cad, parametric-cad, mcp, rust,
+      3d-printing, board-games, bambu-lab); a PR adding it to SolidCraft's `docs/showcase.md`
+      with a GIF from the Motion video; a post in their Discord. The PR and post go out under
+      Shawn's name, so drafted for his go
+- [ ] MakerWorld post for the Lorcana insert (Shawn, after the print, ~2026-10-31); its link goes
+      in BGE's `BOX_INSERT_DESIGNER_MAKERWORLD_URL`. The BGE project page is on staging; prod is
+      on Shawn's go in BGE
+
 ---
 
 ## Insert conventions (2026-10-27)
