@@ -432,11 +432,11 @@ SolidCraft with changes going back and forth between the agent and the app. Deci
       archived; the local remote `archive`)
 
 ### M11 — Beyond the Mac, and being seen
-- [ ] Windows: branch `windows` (3dc2537) builds on SolidCraft's portable Windows package
-      (`windows_*` pins in upstream.toml, moved by upkeep), `tools/fetch-solidcraft.ps1`, agent
-      settings in `%APPDATA%`. Not yet built or run on Windows: Shawn is testing on
-      desktop-81qh677 (2026-10-30), and that session writes `docs/WINDOWS.md` on the branch.
-      Then merge, and change "requires macOS" in the README and on the BGE page to what's true
+- [x] Windows (2026-10-30): builds on SolidCraft's portable Windows package (`windows_*` pins in
+      upstream.toml, moved by upkeep), `tools/fetch-solidcraft.ps1`, agent settings in
+      `%APPDATA%`, verbatim `\\?\` paths stripped. Run end to end on Windows 11 (41/41
+      tests, ccg-example exported, Edit in SolidCraft); `docs/WINDOWS.md`. Not on Windows yet:
+      running as a service, daily upkeep
 - [ ] Linux: same shape (SolidCraft's Linux packages probably carry the CLI; unchecked)
 - [ ] SolidCraft visibility, after Windows is tested and the MakerWorld post is up: README
       "Built on SolidCraft" plus "independent, not affiliated with or endorsed by Tangency Labs"

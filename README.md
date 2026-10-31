@@ -33,8 +33,9 @@ your games folder is its own git repository, saved by the server as you work.
 
 ## Requirements
 
-- macOS (SolidCraft's pinned CLI release is a macOS universal binary)
-- Rust (via [rustup](https://rustup.rs)) and the GitHub CLI (`gh`) to fetch SolidCraft
+- macOS or Windows (x64). Linux isn't tried yet. Windows setup and what's macOS-only:
+  [docs/WINDOWS.md](docs/WINDOWS.md)
+- Rust (via [rustup](https://rustup.rs)); on macOS also the GitHub CLI (`gh`) to fetch SolidCraft
 - An agent: [Claude Code](https://claude.com/claude-code) driving `bid` (or its MCP server), or
   a Claude API key for the app's own agent
 - To reach it from a phone: a private network you control, such as Tailscale. Never expose it
@@ -44,6 +45,7 @@ your games folder is its own git repository, saved by the server as you work.
 
 ```bash
 tools/fetch-solidcraft.sh          # the pinned SolidCraft CLI and web app, checksummed
+                                   # (Windows: tools\fetch-solidcraft.ps1)
 cargo build --release
 mkdir -p games && cp bid.example.toml games/bid.toml    # address, allowed host names, paths
 cp -R examples/ccg-example games/  # optional: a finished insert to look around
@@ -70,7 +72,7 @@ register the MCP server for your user:
 `claude mcp add box-insert-designer -- /path/to/BoxInsertDesigner/target/release/bid mcp`.
 `tools/requests/AGENT.md` is the brief for an agent working the change-request queue.
 
-To run it as a service, `launchd/` has LaunchAgent templates for the server and for the daily
+To run it as a service on macOS, `launchd/` has LaunchAgent templates for the server and for the daily
 SolidCraft upkeep job.
 
 ## Example
