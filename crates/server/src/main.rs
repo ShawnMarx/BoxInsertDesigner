@@ -685,11 +685,22 @@ async fn events(State(app): State<Arc<App>>) -> Sse<impl tokio_stream::Stream<It
     Sse::new(hello.chain(rx).map(|v| Ok(Event::default().data(v.to_string())))).keep_alive(KeepAlive::new().interval(Duration::from_secs(15)))
 }
 
+/// `fs::canonicalize`, without the `\\?\` that Windows puts in front of a drive path: it shows
+/// in the log and in replies (export's `dir`), and not every program takes it.
+fn canonical(p: impl AsRef<Path>) -> std::io::Result<PathBuf> {
+    let p = std::fs::canonicalize(p)?;
+    #[cfg(windows)]
+    if let Some(s) = p.to_str().and_then(|s| s.strip_prefix(r"\\?\")).filter(|s| !s.starts_with(r"UNC\")) {
+        return Ok(PathBuf::from(s));
+    }
+    Ok(p)
+}
+
 /// SolidCraft's web app at the pinned tag (`tools/fetch-solidcraft.sh` unzips it), if fetched.
 fn solidcraft_web(tag: &str) -> Option<PathBuf> {
     let dir = Path::new("upstream").join(tag).join("web");
     let app = std::fs::read_dir(&dir).ok()?.flatten().map(|e| e.path()).find(|p| p.join("index.html").is_file())?;
-    std::fs::canonicalize(app).ok()
+    canonical(app).ok()
 }
 
 fn solidcraft_cli() -> Result<(PathBuf, String), Box<dyn std::error::Error>> {
@@ -705,7 +716,7 @@ fn solidcraft_cli() -> Result<(PathBuf, String), Box<dyn std::error::Error>> {
     if !p.is_file() {
         return Err(format!("{} missing: run tools/fetch-solidcraft.sh (Windows: tools/fetch-solidcraft.ps1)", p.display()).into());
     }
-    Ok((std::fs::canonicalize(p)?, tag))
+    Ok((canonical(p)?, tag))
 }
 
 /// `bid-server --smoke [GAMES_DIR]`: build every game's chosen layout with the configured
@@ -798,7 +809,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = std::env::args().collect();
     if args.get(1).map(String::as_str) == Some("--smoke") {
         let games = PathBuf::from(args.get(2).cloned().unwrap_or_else(|| "games".into()));
-        return smoke(std::fs::canonicalize(games)?).await;
+        return smoke(canonical(games)?).await;
     }
     let bind: SocketAddr = config::server("BID_BIND", "bind").unwrap_or_else(|| DEFAULT_BIND.into()).parse()?;
     if bind.ip().is_unspecified() {
@@ -812,7 +823,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         eprintln!("no SolidCraft web app for {tag} (tools/fetch-solidcraft.sh): Edit in SolidCraft is off");
     }
     std::fs::create_dir_all(&games_dir)?;
-    let games_dir = std::fs::canonicalize(games_dir)?;
+    let games_dir = canonical(games_dir)?;
     for slug in spec::list_games(&games_dir) {
         let _ = std::fs::remove_dir_all(games_dir.join(&slug).join(".build"));
     }
