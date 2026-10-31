@@ -439,9 +439,9 @@ SolidCraft with changes going back and forth between the agent and the app. Deci
       running as a service, daily upkeep
 - [ ] Linux: same shape (SolidCraft's Linux packages probably carry the CLI; unchecked)
 - [ ] SolidCraft visibility. Done 2026-10-30: README "Built on SolidCraft" and the independence
-      line (their DISCLAIMER.md), GitHub topics. Drafted for Shawn's go: a PR adding it to
-      SolidCraft's `docs/showcase.md` (GIF from ccg-example's Motion video, pixelated art) and a
-      Discord post
+      line (their DISCLAIMER.md), GitHub topics. 2026-10-31: showcase PR
+      tangency-labs/solidcraft#10095 (GIF from ccg-example's Motion video, pixelated art), open;
+      the Discord post is Shawn's to send (text in the games repo)
 - [x] MakerWorld post for the Lorcana insert (2026-10-31), linked from the README; its link goes
       in BGE's `BOX_INSERT_DESIGNER_MAKERWORLD_URL`. The BGE project page is on staging; prod is
       on Shawn's go in BGE
