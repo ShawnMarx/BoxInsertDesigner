@@ -83,6 +83,8 @@ decks in lift-out holders, villain and rules cards, health dials, tokens and a f
 the change notes and agent replies that shaped it and a hand edit made in SolidCraft. Published
 art in its photos is pixelated.
 
+A printed insert designed with it: [Lorcana Palace Heist on MakerWorld](https://makerworld.com/en/models/3524093-lorcana-palace-heist-insert#profileId-4028643).
+
 ## Tracking SolidCraft
 
 SolidCraft releases almost daily. This repo carries no SolidCraft code: it pins a release tag
