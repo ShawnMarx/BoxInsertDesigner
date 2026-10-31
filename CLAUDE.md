@@ -48,7 +48,10 @@ files, and a `pkill -f bid-server` also kills a launchd copy, which KeepAlive th
 validates each new SolidCraft release tag in the worktree `upstream/upkeep-wt`, then bumps
 `upstream.toml` and pushes to main by itself when green. **So pull before you start work.** When
 a release breaks something, it starts a remote-controlled fix session (brief:
-`tools/upkeep/SESSION.md`), which may commit and push upkeep fixes without asking. It redeploys
+`tools/upkeep/SESSION.md`), which may commit and push upkeep fixes without asking. Each run
+first checks our pull requests to SolidCraft; news on one (review, comment, conflict, failed
+check, merged) starts a second session (`tools/upkeep/UPSTREAM_PRS.md`) that drafts the answer
+and posts nothing without the owner's go. It redeploys
 the service only when this tree is clean and on main. `docs/UPKEEP.md` is the record.
 
 ## Code map

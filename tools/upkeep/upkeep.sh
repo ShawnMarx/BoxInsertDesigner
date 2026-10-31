@@ -6,7 +6,8 @@
 #   upkeep.sh --force    validate the latest release even if it is already pinned (no bump)
 #   upkeep.sh --verify   validate the worktree as it stands (the fix session uses this)
 #   upkeep.sh --land     verify, then record, push to main and deploy (the fix session ends here)
-#   --no-session         on breakage, write the report but don't start the fix session
+#   --no-session         on breakage (or PR news), write the report but don't start a session
+#   --prs                only check our pull requests to SolidCraft
 #
 # Validation runs in a git worktree (upstream/upkeep-wt) with its own cargo target, so neither
 # your working tree nor the running service binary changes until everything is green:
@@ -18,6 +19,11 @@
 # Red: write upstream/upkeep/report-<tag>.md and start a remote-controlled Claude session in the
 # worktree (tools/upkeep/SESSION.md) that fixes, commits and lands it. Scheduling this job is the
 # authorisation: the session may commit and push upkeep fixes without asking.
+#
+# Every run that looks for a release first checks our own pull requests to SolidCraft (`gh`,
+# authored by its user). Anything new since the last run (a review or comment, a conflict, a
+# failed check, merged or closed) goes to upstream/upkeep/upstream-prs.md and starts a second
+# session (tools/upkeep/UPSTREAM_PRS.md), which drafts but posts nothing without the owner.
 #
 # Local setup comes from bid.toml in the games folder (bid.example.toml): [service] label is the
 # LaunchAgent to restart on deploy (none: no restart), [server] bind the address to health-check,
@@ -40,6 +46,7 @@ TARGET="$REPO/upstream/upkeep-target"
 REPORTS="$REPO/upstream/upkeep"
 GH_REPO="tangency-labs/solidcraft"
 SESSION=$(conf upkeep.session bid-upkeep)
+PR_SESSION=$(conf upkeep.pr_session bid-upstream-prs)
 LABEL=$(conf service.label)
 BIND=$(conf server.bind 127.0.0.1:8102)
 SCREEN=/opt/homebrew/bin/screen
@@ -48,7 +55,7 @@ CLAUDE="$HOME/.local/bin/claude"
 mode=run; session=1
 for a in "$@"; do
   case "$a" in
-    --force) mode=force ;; --verify) mode=verify ;; --land) mode=land ;;
+    --force) mode=force ;; --verify) mode=verify ;; --land) mode=land ;; --prs) mode=prs ;;
     --no-session) session=0 ;;
     *) echo "unknown option $a" >&2; exit 2 ;;
   esac
@@ -186,8 +193,10 @@ deploy() { # only when the main tree is clean and on main: never disturb work in
 }
 
 # ---- the fix session --------------------------------------------------------------------------
-start_session() { # report path
-  local report=$1
+start_session() { # report path [session name] [prompt] [directory]
+  local report=$1 SESSION=${2:-$SESSION}
+  local prompt=${3:-"Daily SolidCraft upkeep found a break. Read tools/upkeep/SESSION.md and follow it. The failure report is $report."}
+  local WT=${4:-$WT}
   if "$SCREEN" -ls 2>/dev/null | grep -q "\.${SESSION}[[:space:]]"; then
     log "a $SESSION session is already running; leaving it (report: $report)"; return 0
   fi
@@ -195,7 +204,6 @@ start_session() { # report path
   if ! /usr/bin/python3 -I -c "import json,os,sys; d=json.load(open(os.path.expanduser('~/.claude.json'))); sys.exit(0 if d.get('projects',{}).get(sys.argv[1],{}).get('hasTrustDialogAccepted') else 1)" "$WT"; then
     log "WARNING: $WT is not trusted in ~/.claude.json; the session will wait on the trust prompt (screen -r $SESSION to answer it)"
   fi
-  local prompt="Daily SolidCraft upkeep found a break. Read tools/upkeep/SESSION.md and follow it. The failure report is $report."
   local inner="$SCREEN -dmS $SESSION $CLAUDE '$prompt' --permission-mode auto --remote-control $SESSION"
   local shell_cmd="cd '$WT' && $inner && sleep 1 && exec $SCREEN -r $SESSION"
   # Through Terminal.app, so a TCC prompt can't hang a detached process.
@@ -205,6 +213,49 @@ start_session() { # report path
   fi
   sleep 3
   "$SCREEN" -ls 2>/dev/null | grep -q "\.${SESSION}[[:space:]]" && log "started session $SESSION in $WT" || log "FAILED to start $SESSION"
+}
+
+# ---- our pull requests to SolidCraft ------------------------------------------------------------
+upstream_prs() { # compare with the last run; on news, write the report and start the PR session
+  local state="$REPORTS/upstream-prs.json" report="$REPORTS/upstream-prs.md" prs news
+  prs=$(gh pr list -R "$GH_REPO" --author @me --state all --limit 30 \
+    --json number,title,url,state,mergeable,reviewDecision,statusCheckRollup,comments,reviews,author 2>/dev/null) \
+    || { log "upstream PRs: gh failed; not checked"; return 0; }
+  news=$(printf '%s' "$prs" | /usr/bin/python3 -I -c '
+import json, sys
+path = sys.argv[1]
+prs = json.load(sys.stdin)
+try: old = json.load(open(path))
+except (OSError, ValueError): old = {}
+new, lines = {}, []
+for p in prs:
+    me = p["author"]["login"]
+    others = [c for c in p["comments"] + p["reviews"] if (c.get("author") or {}).get("login") not in (me, None)]
+    checks = [c.get("conclusion") or c.get("state") or "" for c in p["statusCheckRollup"] or []]
+    cur = {"state": p["state"], "others": len(others), "review": p["reviewDecision"] or "",
+           "conflict": p["mergeable"] == "CONFLICTING", "failing": any(c in ("FAILURE", "ERROR", "TIMED_OUT", "CANCELLED") for c in checks)}
+    was = old.get(str(p["number"]))
+    if p["state"] != "OPEN" and (was is None or was["state"] != "OPEN"):
+        continue  # closed before we started watching it, or already reported
+    new[str(p["number"])] = cur
+    why = []
+    if was is None: why.append("now watched")
+    else:
+        if cur["state"] != was["state"]: why.append(cur["state"].lower())
+        if cur["others"] > was["others"]: why.append("%d new comment(s) or review(s)" % (cur["others"] - was["others"]))
+        if cur["review"] != was["review"] and cur["review"]: why.append("review: " + cur["review"])
+        if cur["conflict"] and not was["conflict"]: why.append("conflicts with main")
+        if cur["failing"] and not was["failing"]: why.append("a check failed")
+    if why: lines.append("- #%s %s (%s): %s" % (p["number"], p["title"], p["url"], ", ".join(why)))
+json.dump(new, open(path, "w"), indent=1)
+print("\n".join(lines))' "$state") || { log "upstream PRs: could not compare"; return 0; }
+  if [ -z "$news" ]; then log "upstream PRs: nothing new"; return 0; fi
+  log "upstream PRs:"$'\n'"$news"
+  # A PR seen for the first time needs nobody; anything else does.
+  printf '%s\n' "$news" | grep -qv ': now watched$' || return 0
+  { echo "# Our SolidCraft pull requests: news ($(date -Iseconds))"; echo; printf '%s\n' "$news"; } > "$report"
+  [ $session = 1 ] && start_session "$report" "$PR_SESSION" \
+    "Daily upkeep found news on our pull requests to SolidCraft. Read tools/upkeep/UPSTREAM_PRS.md and follow it. The news is in $report." "$REPO"
 }
 
 # ---- main -------------------------------------------------------------------------------------
@@ -218,6 +269,9 @@ if [ "$mode" = verify ] || [ "$mode" = land ]; then
   [ "$mode" = verify ] && { printf '%s\n' "$REPORT"; log "verify ok"; exit 0; }
   land "$pinned" "$tag" "fixed by session" "${UPKEEP_NOTE:-see commit}"; exit $?
 fi
+
+upstream_prs
+[ "$mode" = prs ] && exit 0
 
 latest=$(curl -fsSL "https://api.github.com/repos/$GH_REPO/releases/latest" | /usr/bin/python3 -I -c "import json,sys; print(json.load(sys.stdin)['tag_name'])")
 [ -n "$latest" ] || { log "could not read the latest release"; exit 1; }
