@@ -698,10 +698,12 @@ fn solidcraft_cli() -> Result<(PathBuf, String), Box<dyn std::error::Error>> {
     if let Some(p) = config::server("BID_SOLIDCRAFT", "solidcraft") {
         return Ok((p.into(), tag));
     }
-    let bin = pin["solidcraft"]["binary"].as_str().ok_or("upstream.toml: no binary")?;
+    // The macOS CLI ships on its own; on Windows it comes inside the portable desktop package.
+    let key = if cfg!(windows) { "windows_binary" } else { "binary" };
+    let bin = pin["solidcraft"][key].as_str().filter(|b| !b.is_empty()).ok_or_else(|| format!("upstream.toml: no {key} for this platform"))?;
     let p = Path::new("upstream").join(&tag).join("cli").join(bin);
     if !p.is_file() {
-        return Err(format!("{} missing: run tools/fetch-solidcraft.sh", p.display()).into());
+        return Err(format!("{} missing: run tools/fetch-solidcraft.sh (Windows: tools/fetch-solidcraft.ps1)", p.display()).into());
     }
     Ok((std::fs::canonicalize(p)?, tag))
 }

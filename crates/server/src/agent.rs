@@ -147,8 +147,15 @@ fn settings_path() -> PathBuf {
     if let Ok(p) = std::env::var("BID_AGENT_SETTINGS") {
         return PathBuf::from(p);
     }
-    let home = std::env::var("HOME").unwrap_or_else(|_| ".".into());
-    PathBuf::from(home).join("Library/Application Support/BoxInsertDesigner/agent.json")
+    let var = |k: &str| std::env::var(k).ok().filter(|v| !v.is_empty()).map(PathBuf::from);
+    let dir = if cfg!(windows) {
+        var("APPDATA").unwrap_or_else(|| ".".into())
+    } else if cfg!(target_os = "macos") {
+        var("HOME").unwrap_or_else(|| ".".into()).join("Library/Application Support")
+    } else {
+        var("XDG_CONFIG_HOME").or_else(|| var("HOME").map(|h| h.join(".config"))).unwrap_or_else(|| ".".into())
+    };
+    dir.join("BoxInsertDesigner").join("agent.json")
 }
 
 impl Agent {
@@ -160,14 +167,18 @@ impl Agent {
 
     fn save(&self, s: &Settings) -> Result<(), Reason> {
         use std::io::Write;
-        use std::os::unix::fs::OpenOptionsExt;
         let err = |e: std::io::Error| Reason::new("settings_unsaved", format!("couldn't save {}: {e}", self.path.display()));
         if let Some(d) = self.path.parent() {
             std::fs::create_dir_all(d).map_err(err)?;
         }
         // Owner-only: it holds the API key.
         let tmp = self.path.with_extension("json.tmp");
-        let mut f = std::fs::OpenOptions::new().write(true).create(true).truncate(true).mode(0o600).open(&tmp).map_err(err)?;
+        let mut opts = std::fs::OpenOptions::new();
+        opts.write(true).create(true).truncate(true);
+        // On Windows the file inherits the user profile's ACL, which is already owner-only.
+        #[cfg(unix)]
+        std::os::unix::fs::OpenOptionsExt::mode(&mut opts, 0o600);
+        let mut f = opts.open(&tmp).map_err(err)?;
         f.write_all(serde_json::to_string_pretty(s).unwrap().as_bytes()).map_err(err)?;
         std::fs::rename(&tmp, &self.path).map_err(err)
     }
