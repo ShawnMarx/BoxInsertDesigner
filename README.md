@@ -1,6 +1,7 @@
 # BoxInsertDesigner
 
 Design 3D-printed board game inserts with an AI agent, from your phone or a browser.
+Built on [SolidCraft](https://github.com/tangency-labs/solidcraft).
 
 You measure and photograph the game's components. The agent proposes layouts, and a deterministic
 packer checks that each one fits, prints without supports and follows your style guide. You
@@ -92,6 +93,12 @@ right; [docs/UPKEEP.md](docs/UPKEEP.md) and [docs/PATCHES.md](docs/PATCHES.md) a
 
 - Plan and architecture: [docs/PLAN.md](docs/PLAN.md)
 - What we know about SolidCraft: [docs/RESEARCH.md](docs/RESEARCH.md)
+
+## SolidCraft
+
+BoxInsertDesigner is built on [SolidCraft](https://github.com/tangency-labs/solidcraft), which
+does all of its geometry: headless from its CLI for every tray, and in its web app for hand edits.
+It is an independent project, not affiliated with or endorsed by Tangency Labs.
 
 ## Licence
 
