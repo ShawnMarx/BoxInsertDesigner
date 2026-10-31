@@ -82,6 +82,12 @@ fetch_release() { # tag → sets ASSET SHA BINARY CLI; downloads into upstream/<
   BINARY="solidcraft-cli-${ver}-macos-universal/solidcraft-cli"
   CLI="$dir/cli/$BINARY"
   [ -x "$CLI" ] || { log "no $BINARY in $ASSET"; return 1; }
+  # Windows: the CLI inside the portable package. Pinned from SHA256SUMS only (it can't run
+  # here); tools/fetch-solidcraft.ps1 verifies the file on a Windows machine.
+  WIN_ASSET="solidcraft-${ver}-windows-x64-portable.zip"
+  WIN_SHA=$(awk -v a="$WIN_ASSET" '$2 == a { print $1 }' "$dir/SHA256SUMS.txt")
+  WIN_BINARY="solidcraft-${ver}-windows-x64-portable/solidcraft-cli.exe"
+  [ -n "$WIN_SHA" ] || { log "no $WIN_ASSET in $tag; Windows unpinned"; WIN_ASSET=""; WIN_BINARY=""; }
   # The web app (Edit in SolidCraft) is optional: without it the editor says it's missing.
   WEB_ASSET="solidcraft-web-${ver}.zip"; WEB_SHA=""
   if [ -f "$dir/$WEB_ASSET" ] || curl -fsSL -o "$dir/$WEB_ASSET" "$base/$WEB_ASSET"; then
@@ -97,12 +103,13 @@ fetch_release() { # tag → sets ASSET SHA BINARY CLI; downloads into upstream/<
 }
 
 set_pin() { # rewrite upstream.toml in the worktree
-  /usr/bin/python3 -I - "$WT/upstream.toml" "$1" "$ASSET" "$SHA" "$BINARY" "$WEB_ASSET" "$WEB_SHA" <<'EOF'
+  /usr/bin/python3 -I - "$WT/upstream.toml" "$1" "$ASSET" "$SHA" "$BINARY" "$WEB_ASSET" "$WEB_SHA" "$WIN_ASSET" "$WIN_SHA" "$WIN_BINARY" <<'EOF'
 import re, sys
-path, tag, asset, sha, binary, web_asset, web_sha = sys.argv[1:]
+path, tag, asset, sha, binary, web_asset, web_sha, win_asset, win_sha, win_binary = sys.argv[1:]
 s = open(path).read()
 web = (("web_asset", web_asset), ("web_sha256", web_sha)) if web_sha else (("web_asset", ""), ("web_sha256", ""))
-for k, v in (("tag", tag), ("asset", asset), ("sha256", sha), ("binary", binary)) + web:
+win = (("windows_asset", win_asset), ("windows_sha256", win_sha), ("windows_binary", win_binary))
+for k, v in (("tag", tag), ("asset", asset), ("sha256", sha), ("binary", binary)) + web + win:
     s = re.sub(rf'^{k} = ".*"$', f'{k} = "{v}"', s, flags=re.M)
 open(path, "w").write(s)
 EOF

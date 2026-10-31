@@ -94,7 +94,10 @@ static CLIENT: std::sync::Mutex<Option<Value>> = std::sync::Mutex::new(None);
 
 fn client_info(via: &str) -> Value {
     let env = |k: &str| std::env::var(k).ok().filter(|v| !v.is_empty());
-    let host = std::process::Command::new("hostname").arg("-s").output().ok().map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string());
+    // Windows names the machine in COMPUTERNAME, and its `hostname` takes no -s.
+    let host = env("COMPUTERNAME").or_else(|| {
+        std::process::Command::new("hostname").arg("-s").output().ok().map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
+    });
     json!({
         "via": via, "host": host, "pid": std::process::id(),
         "cwd": std::env::current_dir().ok().map(|d| d.display().to_string()),

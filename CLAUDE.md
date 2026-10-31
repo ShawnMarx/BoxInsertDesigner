@@ -108,7 +108,8 @@ the service only when this tree is clean and on main. `docs/UPKEEP.md` is the re
 - `crates/server/src/agent.rs` — the agents working the request queue: notices an outside one
   polling (`wait_requests`; `bid` sends `x-bid-client`: via, host, folder, Claude Code session), and runs the app's own when Settings has
   a Claude API key (`set_agent`: key, model, thinking level). The key is kept in
-  `~/Library/Application Support/BoxInsertDesigner/agent.json` (0600; `BID_AGENT_SETTINGS`
+  `BoxInsertDesigner/agent.json` in the user's settings folder (macOS `~/Library/Application
+  Support`, Windows `%APPDATA%`, Linux `~/.config`; 0600 where Unix; `BID_AGENT_SETTINGS`
   overrides), never in a repo and never sent to a browser. Its tools are the command surface,
   `crates/server/src/tools_table.rs`, which `bid mcp` includes too.
 
