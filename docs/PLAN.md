@@ -438,12 +438,10 @@ SolidCraft with changes going back and forth between the agent and the app. Deci
       tests, ccg-example exported, Edit in SolidCraft); `docs/WINDOWS.md`. Not on Windows yet:
       running as a service, daily upkeep
 - [ ] Linux: same shape (SolidCraft's Linux packages probably carry the CLI; unchecked)
-- [ ] SolidCraft visibility, after Windows is tested and the MakerWorld post is up: README
-      "Built on SolidCraft" plus "independent, not affiliated with or endorsed by Tangency Labs"
-      (their DISCLAIMER.md); GitHub topics (solidcraft, cad, parametric-cad, mcp, rust,
-      3d-printing, board-games, bambu-lab); a PR adding it to SolidCraft's `docs/showcase.md`
-      with a GIF from the Motion video; a post in their Discord. The PR and post go out under
-      Shawn's name, so drafted for his go
+- [ ] SolidCraft visibility. Done 2026-10-30: README "Built on SolidCraft" and the independence
+      line (their DISCLAIMER.md), GitHub topics. Drafted for Shawn's go: a PR adding it to
+      SolidCraft's `docs/showcase.md` (GIF from ccg-example's Motion video, pixelated art) and a
+      Discord post. Both want the MakerWorld link
 - [ ] MakerWorld post for the Lorcana insert (Shawn, after the print, ~2026-10-31); its link goes
       in BGE's `BOX_INSERT_DESIGNER_MAKERWORLD_URL`. The BGE project page is on staging; prod is
       on Shawn's go in BGE
