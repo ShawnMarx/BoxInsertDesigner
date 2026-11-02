@@ -27,3 +27,4 @@ the session took.
 | 2026-10-29 | v0.25.1 | v0.26.0 | fixed by session | unchanged | anachrony 6 ms, lorcana-palace-heist 1050 ms, sample-harbour 1772 ms | 4 s | Not the release: packer test grab_holes_come_in_pairs_clear_of_every_pocket failed since 45adc49 (a spare across the tray ran through a grab hole); fixed on main in 505f8e4, v0.26.0 unchanged |
 | 2026-10-30 | v0.26.0 | v0.27.1 | green | changed | anachrony 16 ms, lorcana-palace-heist 49024 ms, sample-harbour 8483 ms | 150 s | auto-bumped |
 | 2026-10-31 | v0.27.1 | v0.28.0 | green | changed | anachrony 15 ms, ccg-example 70288 ms, lorcana-palace-heist 70880 ms, sample-harbour 12318 ms | 285 s | auto-bumped |
+| 2026-11-02 | v0.28.0 | v0.30.0 | green | changed | anachrony 15 ms, ccg-example 79003 ms, lorcana-palace-heist 81428 ms, sample-harbour 13155 ms | 193 s | auto-bumped |
