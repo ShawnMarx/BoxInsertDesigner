@@ -2074,10 +2074,18 @@ mod tests {
 
     #[test]
     fn printed_sizing_is_quick() {
+        // Best of three, each a full search (size_printed, past the memo): one run alone takes
+        // ~250 ms, but the upkeep job runs this at 06:10 beside other scheduled work, where a
+        // single run has taken 1.6 s and 4.6 s and flagged a release as broken that wasn't.
         let s = printed_sample();
-        let t = std::time::Instant::now();
-        let all = generate_all(&s, &s.boxes()[0]);
-        let ms = t.elapsed().as_millis();
+        let gb = &s.boxes()[0];
+        let mut ms = u128::MAX;
+        let mut all = Vec::new();
+        for _ in 0..3 {
+            let t = std::time::Instant::now();
+            all = STRATEGIES.iter().map(|(st, _, _)| size_printed(&s, gb, st)).collect::<Vec<_>>();
+            ms = ms.min(t.elapsed().as_millis());
+        }
         eprintln!("{ms} ms");
         for l in &all {
             eprintln!("{}: {:?} outside, {} trays", l.strategy, l.printed.as_ref().map(|p| p.outer), l.trays.len());
