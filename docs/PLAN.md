@@ -443,6 +443,8 @@ SolidCraft with changes going back and forth between the agent and the app. Deci
       tangency-labs/solidcraft#10095 (GIF from ccg-example's Motion video, pixelated art), open;
       2026-11-02 the maintainer asked for the GIF and what it does in the description;
       done the same day (GIF and a user-facing paragraph lead the description, reply posted);
+      2026-11-04 their asset gate failed (no ATTRIBUTION rows for the GIF and MP4): rows added
+      in `attribution/pending/box-insert-designer-showcase.md`, pushed (d6409a61);
       the Discord post is Shawn's to send (text in the games repo)
 - [x] MakerWorld post for the Lorcana insert (2026-10-31), linked from the README; its link goes
       in BGE's `BOX_INSERT_DESIGNER_MAKERWORLD_URL`. The BGE project page is on staging; prod is
