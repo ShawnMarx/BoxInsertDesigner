@@ -440,12 +440,12 @@ SolidCraft with changes going back and forth between the agent and the app. Deci
 - [ ] Linux: same shape (SolidCraft's Linux packages probably carry the CLI; unchecked)
 - [ ] SolidCraft visibility. Done 2026-10-30: README "Built on SolidCraft" and the independence
       line (their DISCLAIMER.md), GitHub topics. 2026-10-31: showcase PR
-      tangency-labs/solidcraft#10095 (GIF from ccg-example's Motion video, pixelated art), open;
+      tangency-labs/solidcraft#10095 (GIF from ccg-example's Motion video, pixelated art);
       2026-11-02 the maintainer asked for the GIF and what it does in the description;
       done the same day (GIF and a user-facing paragraph lead the description, reply posted);
       2026-11-04 their asset gate failed (no ATTRIBUTION rows for the GIF and MP4): rows added
       in `attribution/pending/box-insert-designer-showcase.md`, pushed (d6409a61);
-      the Discord post is Shawn's to send (text in the games repo)
+      merged 2026-11-05 (now in their `docs/showcase.md`); the Discord post is Shawn's to send (text in the games repo)
 - [x] MakerWorld post for the Lorcana insert (2026-10-31), linked from the README; its link goes
       in BGE's `BOX_INSERT_DESIGNER_MAKERWORLD_URL`. The BGE project page is on staging; prod is
       on Shawn's go in BGE
