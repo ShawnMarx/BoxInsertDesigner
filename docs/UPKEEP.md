@@ -35,3 +35,4 @@ the session took.
 | 2026-11-16 | v0.42.0 | v0.43.0 | green | changed | anachrony 10 ms, ccg-example 64465 ms, lorcana-palace-heist 64070 ms, sample-harbour 14357 ms | 169 s | auto-bumped |
 | 2026-11-18 | v0.43.0 | v0.44.1 | green | changed | anachrony 438 ms, ccg-example 79622 ms, lorcana-palace-heist 77161 ms, sample-harbour 21863 ms | 207 s | auto-bumped |
 | 2026-11-20 | v0.44.1 | v0.45.0 | green | unchanged | anachrony 11 ms, ccg-example 95601 ms, lorcana-palace-heist 89947 ms, sample-harbour 26301 ms | 245 s | auto-bumped |
+| 2026-11-23 | v0.45.0 | v0.47.0 | green | changed | anachrony 9 ms, ccg-example 75802 ms, lorcana-palace-heist 69737 ms, sample-harbour 23972 ms | 203 s | auto-bumped |
