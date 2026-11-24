@@ -2,17 +2,17 @@
 # `tools/fetch-solidcraft.sh` downloads the CLI and checks it against the release's SHA256SUMS.txt.
 [solidcraft]
 repo = "tangency-labs/solidcraft"
-tag = "v0.47.0"
-asset = "solidcraft-cli-0.47.0-macos-universal.zip"
-sha256 = "6b0a3419e313f45faf7cb4b644c9af6652bb66929e7bec67ccb105e81b2f4758"
+tag = "v0.48.1"
+asset = "solidcraft-cli-0.48.1-macos-universal.zip"
+sha256 = "813f78ab7ca40f33e27ce49e55ecfe48135ed8b8718642e1945d6b7fdcce1906"
 # Path of the binary inside upstream/<tag>/cli/ once unzipped.
-binary = "solidcraft-cli-0.47.0-macos-universal/solidcraft-cli"
+binary = "solidcraft-cli-0.48.1-macos-universal/solidcraft-cli"
 # Windows x64: the CLI comes inside the portable desktop package
 # (tools/fetch-solidcraft.ps1 fetches it; the server picks windows_binary on Windows).
-windows_asset = "solidcraft-0.47.0-windows-x64-portable.zip"
-windows_sha256 = "394e86dae142b2f819d8d64efdbc99c9096a8a2a92e62aef0a56fe17e035a2db"
-windows_binary = "solidcraft-0.47.0-windows-x64-portable/solidcraft-cli.exe"
+windows_asset = "solidcraft-0.48.1-windows-x64-portable.zip"
+windows_sha256 = "c61f78f1c9f0e1404323a076e3f1a926c55d060f5e33d5c6f71063028543bcd4"
+windows_binary = "solidcraft-0.48.1-windows-x64-portable/solidcraft-cli.exe"
 # SolidCraft's web app at the same tag, served at /solidcraft/ for "Edit in SolidCraft".
 # Unzipped into upstream/<tag>/web/; the app is in its solidcraft-web-<ver>/ folder.
-web_asset = "solidcraft-web-0.47.0.zip"
-web_sha256 = "6fa958ebfe73f4eb0075846e7bd202385bd126d9cfb6cedde21a0863801986f1"
+web_asset = "solidcraft-web-0.48.1.zip"
+web_sha256 = "7a81cd0be381eb83cd750cc0ba060175cf6e5b314c8ca68acc24c71e1c5fdcf5"
