@@ -450,6 +450,32 @@ SolidCraft with changes going back and forth between the agent and the app. Deci
       in BGE's `BOX_INSERT_DESIGNER_MAKERWORLD_URL`. The BGE project page is on staging; prod is
       on Shawn's go in BGE
 
+### M12 — Scan mat: measure from photos (proposed 2026-11-26)
+Shawn, from a YouTube video ("Copy & Paste Physical Things Now"): a printed Letter-size mat
+(landscape) with a teal field, a white border carrying six ArUco-style markers (four corners,
+two at the middle of the long edges), mm rulers on every edge and a long scale bar. The phone
+sits on a tripod pointing straight down (his: a K&F Concept travel tripod whose centre column
+swings out horizontal, a ball head, and a phone clamp on the arm's end, holding the phone out
+past the legs so they stay out of the shot); the object is shot six ways (four sides, top, bottom).
+Each photo straightens to a true-scale view, and the object is whatever isn't teal.
+Fits BID because a face texture is already a quad straightened to known proportions
+(`media.rs`); here the mat is the known size, so the photo yields the measurements.
+- [ ] Phase 1: `bid scan_mat` / a Components-tab link prints the mat PDF (Letter; A4 later),
+      with a scale bar to confirm 100% printing. Upload a top photo as a `scan` (the four mat
+      corners tapped, reusing the face-marking UI) → homography → teal keyed out → outline as a
+      polygon in mm → `measure.piece` width/depth filled in, outline stored, crop kept as the
+      `top` face. Height still typed (calipers). Check against calipers on a few Anachrony pieces
+- [ ] Phase 2: markers found automatically (ArUco decoding in Rust, no OpenCV dependency if
+      avoidable), several pieces per photo (count, size spread flagged), a side photo for
+      height and profile
+- [ ] Phase 3: fitted pockets for `Outline::Irregular` (outline + 0.8 mm tolerance, cut into
+      the tray in `geometry.rs`); six views → visual hull as the component's 3D ghost
+- Accuracy: an object's top is nearer the camera than the mat, so it reads large (~5% for a
+  20 mm mini at 40 cm). Use the 2×/3× lens from higher up, correct with the camera height the
+  markers give plus the known height, and treat the outline as a footprint
+- Claude reviews the cut-out ("is this the piece?"); the outline itself is measured data, never
+  hand-placed geometry
+
 ---
 
 ## Insert conventions (2026-10-27)
