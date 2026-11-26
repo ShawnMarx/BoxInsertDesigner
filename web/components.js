@@ -35,6 +35,7 @@ let newKind = null;
 export function initComponents(a) {
   api = a;
   $('comp-add').addEventListener('click', () => { newKind = null; edit('new'); });
+  $('comp-photo-add').addEventListener('click', () => edit('photo'));
   $('box-add-comp').addEventListener('click', () => { newKind = 'box'; edit('new'); });
   initScanSheet();
 }
@@ -88,7 +89,7 @@ export function renderComponents() {
   if (!st?.spec) return;
   const s = st.spec;
   const place = Object.fromEntries((st.placement || []).map((p) => [p.id, p]));
-  if (editing && editing !== 'new' && !s.components.some((c) => c.id === editing)) editing = null;
+  if (editing && editing !== 'new' && editing !== 'photo' && !s.components.some((c) => c.id === editing)) editing = null;
   if (!editing && !s.components.length) editing = 'new';
   const row = (c) => {
     const p = place[c.id];
@@ -106,11 +107,11 @@ export function renderComponents() {
     || '<p class="muted small">No box yet. Measure the game’s box, or have one designed to print, sized to what goes in it.</p>';
   $('comp-list').innerHTML = s.components.filter((c) => c.kind !== 'box').map(row).join('') || '<p class="muted small">Nothing yet. Measure a piece and add it.</p>';
   for (const b of document.querySelectorAll('#box-list [data-id], #comp-list [data-id]')) b.addEventListener('click', () => edit(b.dataset.id));
-  const c = editing === 'new' ? null : s.components.find((x) => x.id === editing);
-  const key = editing === 'new' ? 'new' : c ? JSON.stringify(c) + JSON.stringify(place[c.id]) + (st.boxes || []).length + JSON.stringify(st.textures?.[c.id] || {}) : 'none';
+  const c = editing === 'new' || editing === 'photo' ? null : s.components.find((x) => x.id === editing);
+  const key = editing === 'new' || editing === 'photo' ? editing : c ? JSON.stringify(c) + JSON.stringify(place[c.id]) + (st.boxes || []).length + JSON.stringify(st.textures?.[c.id] || {}) : 'none';
   if (key !== editorKey) {
     editorKey = key;
-    renderEditor(c);
+    if (editing === 'photo') renderPhotoNew(); else renderEditor(c);
   }
 }
 
@@ -154,6 +155,7 @@ function renderEditor(c) {
     <div class="sheet-head"><h2>${c ? `Edit ${esc(c.name)}` : 'New component'}</h2>
       ${c ? `<code class="muted small">${esc(c.id)}</code>` : ''}</div>
     <label>Name <input name="name" required value="${esc(c?.name || '')}" placeholder="Event cards, coins, player boards…"></label>
+    ${c && c.kind !== 'box' && c.scans?.length ? scanSection(c) : ''}
 
     <fieldset class="for-box"><legend>The box</legend>
       <div class="seg" role="radiogroup">
@@ -236,7 +238,7 @@ function renderEditor(c) {
         ${(c.photos || []).length ? `<button type="button" class="toggle" id="comp-faces">${c.kind === 'box' ? 'Mark the lid’s top, front and side' : 'Mark faces for the 3D view'}</button>` : ''}
       </div></fieldset>` : '<p class="muted small">Photos can be added once it is saved.</p>'}
 
-    ${c && c.kind !== 'box' ? scanSection(c) : ''}
+    ${c && c.kind !== 'box' && !c.scans?.length ? scanSection(c) : ''}
 
     <p id="comp-err" class="bad small" hidden></p>
     <div class="form-actions">
@@ -252,6 +254,9 @@ function renderEditor(c) {
   const stackCount = (v) => `<label>Pieces in the stack <span class="muted small">— leave empty for a loose pile</span>
       <input name="SC" type="number" min="1" step="1" inputmode="numeric" value="${num(v)}"></label>`;
   let vals = { piece: m.piece, stack: m.stack, sc: m.stack_count };
+  // Not measured yet, but scanned: the scan's footprint, waiting for its height.
+  const scanned = [...(c?.scans || [])].reverse().find((x) => x.result && x.view === 'flat');
+  if (!m.piece && !m.stack && scanned) vals.piece = [scanned.result.size[0], scanned.result.size[1], undefined];
   const drawDims = () => {
     const o = f.of.value;
     const ot = o === 'piece' ? 'stack' : 'piece';
@@ -487,19 +492,7 @@ function wireScans(c) {
   $('scan-file')?.addEventListener('change', async (e) => {
     const file = e.target.files[0];
     e.target.value = '';
-    if (!file) return;
-    api.toast('Uploading the scan…');
-    // The original bytes, not a canvas copy: its EXIF focal length is needed.
-    const data = await new Promise((ok, no) => { const r = new FileReader(); r.onload = () => ok(r.result); r.onerror = no; r.readAsDataURL(file); });
-    const ruler = +$('scan-ruler').value;
-    const body = { cmd: 'add_scan', component: c.id, data, mat: $('scan-mat').value, view: $('scan-view').value };
-    if (+$('scan-height').value > 0) body.height = +$('scan-height').value;
-    if (ruler > 0) body.print_scale = Math.round(ruler / 200 * 10000) / 10000;
-    const v = await api.command(body);
-    if (!v.ok) return;
-    editorKey = null;
-    await api.refresh();
-    openTaps(c.id, v.data);
+    if (file) await uploadScan(c.id, file);
   });
   for (const b of q('[data-scan-taps]')) b.addEventListener('click', () => {
     const x = c.scans.find((s) => s.id === b.dataset.scanTaps);
@@ -528,11 +521,85 @@ function wireScans(c) {
   });
 }
 
+/// Send a scan photo for `component` from the scan controls on screen, then open the taps.
+/// `after(v)` runs once it's measured.
+async function uploadScan(component, file, after) {
+  api.toast('Uploading the photo…');
+  // The original bytes, not a canvas copy: its EXIF focal length is needed.
+  const data = await new Promise((ok, no) => { const r = new FileReader(); r.onload = () => ok(r.result); r.onerror = no; r.readAsDataURL(file); });
+  const ruler = +$('scan-ruler').value;
+  const body = { cmd: 'add_scan', component, data, mat: $('scan-mat').value, view: $('scan-view')?.value || 'flat' };
+  if (+$('scan-height').value > 0) body.height = +$('scan-height').value;
+  if (ruler > 0) body.print_scale = Math.round(ruler / 200 * 10000) / 10000;
+  const v = await api.command(body);
+  if (!v.ok) return false;
+  editorKey = null;
+  await api.refresh();
+  openTaps(component, v.data, after);
+  return true;
+}
+
+/// A new component, started from a photo of it on the mat: it's measured first, and the form
+/// opens filled in.
+function renderPhotoNew() {
+  const prefs = scanPrefs();
+  const ruler = Math.round(lastScale() * 200 * 10) / 10;
+  $('comp-editor').innerHTML = `
+  <div class="form card">
+    <div class="sheet-head"><h2>New component from a photo</h2></div>
+    <ol class="small scan-steps">
+      <li>Print a mat at 100%, Letter landscape: ${MATS.map(([, n, f]) => `<a href="/mats/${f}" target="_blank" rel="noopener">${esc(n)}</a>`).join(' · ')}.</li>
+      <li>Lay one piece flat in the middle of the coloured field.</li>
+      <li>Shoot straight down from 30–40 cm with all six markers in the frame (the 2× lens if you have one).</li>
+      <li>Tap the four corner markers. The sizes, its top face and the photo go into a new component for you to name and finish.</li>
+    </ol>
+    <label>Name <span class="muted small">— optional now</span> <input id="scan-name" placeholder="Coins, worker meeples, event tokens…"></label>
+    <div class="two">
+      <label>Mat <select id="scan-mat">${MATS.slice(0, 2).map(([k, n]) => `<option value="${k}" ${(prefs.mat || 'teal') === k ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select></label>
+      <label>How thick it is, mm <span class="muted small">— calipers; corrects for its top being nearer the camera</span>
+        <input id="scan-height" type="number" step="0.01" min="0" inputmode="decimal"></label>
+    </div>
+    <label>The mat's 200 mm ruler measures, mm <span class="muted small">— some printers shrink the page</span>
+      <input id="scan-ruler" type="number" step="0.1" min="160" max="240" inputmode="decimal" value="${ruler}"></label>
+    <div class="form-actions"><span class="spacer"></span>
+      <label class="primary file-btn">Take or choose the photo<input id="scan-file" type="file" accept="image/jpeg" hidden></label></div>
+  </div>`;
+  $('scan-mat').addEventListener('change', (e) => saveScanPrefs({ mat: e.target.value }));
+  $('scan-file').addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    e.target.value = '';
+    if (!file) return;
+    const s = api.state().spec;
+    const name = $('scan-name').value.trim() || 'New piece';
+    const base = slugify(name) || 'piece';
+    const ids = new Set([...s.components.map((x) => x.id), ...(s.groups || []).map((g) => g.id)]);
+    let id = base;
+    for (let i = 2; ids.has(id); i++) id = `${base}-${i}`;
+    const made = await api.command({ cmd: 'add_component', id, name, kind: 'undecided' });
+    if (!made.ok) return;
+    const sent = await uploadScan(id, file, async (v) => {
+      // Measured: its sizes into the component when its height is known; else the form waits for it.
+      if (v.data?.result && v.data?.height) {
+        const u = await api.command({ cmd: 'use_scan', component: id, scan: v.data.id });
+        if (u.ok) api.toast(u.message.replace(/^'[^']*': /, ''));
+      }
+      editing = id;
+      editorKey = null;
+      await api.refresh();
+    });
+    if (!sent) { await api.command({ cmd: 'remove_component', id }); await api.refresh(); return; }
+    // The form for it is behind the tap sheet, ready.
+    editing = id;
+    editorKey = null;
+    renderComponents();
+  });
+}
+
 // The tap sheet: four corner markers, tapped on the photo.
 let taps = [];
 let tapping = null;
-function openTaps(component, scan) {
-  tapping = { component, scan: scan.id };
+function openTaps(component, scan, after) {
+  tapping = { component, scan: scan.id, after };
   taps = (scan.taps || []).map((p) => [...p]);
   $('scan-img').src = scan.photo_url || `/api/games/${encodeURIComponent(api.game())}/media/photos/${encodeURIComponent(scan.photo)}`;
   $('scan-sheet').hidden = false;
@@ -574,8 +641,9 @@ function initScanSheet() {
     if (!v.ok) return;
     api.toast(v.message.replace(/^scan \S+: /, ''));
     $('scan-sheet').hidden = true;
+    const after = tapping.after;
     tapping = null;
     editorKey = null;
-    await api.refresh();
+    if (after) await after(v); else await api.refresh();
   });
 }

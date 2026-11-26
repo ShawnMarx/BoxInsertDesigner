@@ -500,7 +500,9 @@ Fits BID because a face texture is already a quad straightened to known proporti
       request the agent answers on the scan card (the app's own agent gets the overlay as an
       image). Still open: the per-printer scale is typed per scan (the 200 mm ruler); a black die in
       dappled shadow on Magenta read 17.1–17.5 against 18.1, its shadowed sides keyed as field;
-      several pieces on the field measure the largest only
+      several pieces on the field measure the largest only. Components has "From a photo" beside
+      "By hand": mat, thickness, the photo, the taps, and a new component opens with its sizes,
+      top face and overlay filled in (no thickness: the form waits for it, footprint prefilled)
 - [ ] Phase 1 as planned: `bid scan_mat` / a Components-tab link prints the mat PDF (Letter; A4 later),
       with a scale bar to confirm 100% printing. Upload a top photo as a `scan` (the four mat
       corners tapped, reusing the face-marking UI) → homography → teal keyed out → outline as a
