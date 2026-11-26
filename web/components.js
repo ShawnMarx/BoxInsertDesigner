@@ -465,15 +465,15 @@ function scanCard(c, x) {
       <div class="scan-size">${fmt2(r.size[0])} × ${fmt2(r.size[1])} mm</div>
       <p class="small muted">Outline as it lies ${fmt2(r.raw[0])} × ${fmt2(r.raw[1])} mm, ${x.height ? `corrected for ${fmt2(x.height)} mm tall` : 'not corrected for height'} · ${Math.round(r.fill * 100)}% of its box filled · camera ${r.camera_height} mm up · ${r.focal_35}${r.focal_assumed ? ' (assumed)' : ''} mm lens${x.print_scale !== 1 ? ` · mat printed at ${(x.print_scale * 100).toFixed(1)}%` : ''}</p>
       ${(r.notes || []).map((n) => `<p class="small warn">${esc(n)}</p>`).join('')}
-      <p class="small muted">Yellow is what stood out from the mat, cyan its box, magenta the footprint fitted. If the yellow isn't the piece, redo the corners or shoot it again.</p>
+      <p class="small muted">Yellow is what stood out from the mat, cyan its box, magenta the footprint fitted. If the yellow isn't the piece, fix the corners or shoot it again.</p>
       <div class="scan-checks">${check('long', r.size[0])}${check('short', r.size[1])}</div>`
-    : x.problem ? `<p class="small bad">Couldn't measure it: ${esc(x.problem)}</p>` : '<p class="small warn">Not measured yet: tap the mat’s corners.</p>'}
+    : x.problem ? `<p class="small bad">Couldn't measure it: ${esc(x.problem)}</p>` : '<p class="small warn">Not measured yet.</p>'}
     ${x.request ? api.requestNote(x.request) : ''}
     <label class="small">Tell the agent <span class="muted">— what looks wrong, or what to do with it</span>
       <textarea rows="2" data-scan-notes="${esc(x.id)}" placeholder="The cut-out includes its shadow on the left…"></textarea></label>
     <div class="form-actions">
       <button type="button" class="toggle danger" data-scan-remove="${esc(x.id)}">Remove</button>
-      <button type="button" class="toggle" data-scan-taps="${esc(x.id)}">${x.taps ? 'Redo corners' : 'Tap corners'}</button>
+      <button type="button" class="toggle" data-scan-taps="${esc(x.id)}">${x.taps ? 'Redo corners' : r ? 'Fix corners' : 'Tap corners'}</button>
       <button type="button" class="toggle" data-scan-send="${esc(x.id)}">Tell the agent</button>
       <span class="spacer"></span>
       ${r ? `<button type="button" class="primary" data-scan-use="${esc(x.id)}">${x.view === 'flat' ? 'Use these sizes' : 'Use as its thickness'}</button>` : ''}
@@ -496,7 +496,7 @@ function wireScans(c) {
   });
   for (const b of q('[data-scan-taps]')) b.addEventListener('click', () => {
     const x = c.scans.find((s) => s.id === b.dataset.scanTaps);
-    openTaps(c.id, { ...x, photo_url: `/api/games/${encodeURIComponent(api.game())}/media/photos/${encodeURIComponent(x.photo)}` });
+    openTaps(c.id, { ...x, taps: x.taps || x.result?.corners, photo_url: `/api/games/${encodeURIComponent(api.game())}/media/photos/${encodeURIComponent(x.photo)}` });
   });
   for (const b of q('[data-scan-use]')) b.addEventListener('click', async () => {
     const v = await api.command({ cmd: 'use_scan', component: c.id, scan: b.dataset.scanUse });
@@ -521,8 +521,9 @@ function wireScans(c) {
   });
 }
 
-/// Send a scan photo for `component` from the scan controls on screen, then open the taps.
-/// `after(v)` runs once it's measured.
+/// Send a scan photo for `component` from the scan controls on screen. The mat's corners are
+/// found by themselves; only when they aren't does the tap sheet open. `after(v)` runs once it's
+/// measured.
 async function uploadScan(component, file, after) {
   api.toast('Uploading the photo…');
   // The original bytes, not a canvas copy: its EXIF focal length is needed.
@@ -533,9 +534,15 @@ async function uploadScan(component, file, after) {
   if (ruler > 0) body.print_scale = Math.round(ruler / 200 * 10000) / 10000;
   const v = await api.command(body);
   if (!v.ok) return false;
-  editorKey = null;
-  await api.refresh();
-  openTaps(component, v.data, after);
+  api.toast(v.message.replace(/^scan \S+: /, ''));
+  if (v.data?.result) {
+    editorKey = null;
+    if (after) await after(v); else await api.refresh();
+  } else {
+    editorKey = null;
+    await api.refresh();
+    openTaps(component, v.data, after);
+  }
   return true;
 }
 
@@ -551,7 +558,7 @@ function renderPhotoNew() {
       <li>Print a mat at 100%, Letter landscape: ${MATS.map(([, n, f]) => `<a href="/mats/${f}" target="_blank" rel="noopener">${esc(n)}</a>`).join(' · ')}.</li>
       <li>Lay one piece flat in the middle of the coloured field.</li>
       <li>Shoot straight down from 30–40 cm with all six markers in the frame (the 2× lens if you have one).</li>
-      <li>Tap the four corner markers. The sizes, its top face and the photo go into a new component for you to name and finish.</li>
+      <li>Send it: the mat's corners are found for you (you tap them only if they can't be). The sizes, its top face and the photo go into a new component for you to name and finish.</li>
     </ol>
     <label>Name <span class="muted small">— optional now</span> <input id="scan-name" placeholder="Coins, worker meeples, event tokens…"></label>
     <div class="two">
@@ -588,7 +595,7 @@ function renderPhotoNew() {
       await api.refresh();
     });
     if (!sent) { await api.command({ cmd: 'remove_component', id }); await api.refresh(); return; }
-    // The form for it is behind the tap sheet, ready.
+    // Measured, or the form for it is behind the tap sheet, ready.
     editing = id;
     editorKey = null;
     renderComponents();

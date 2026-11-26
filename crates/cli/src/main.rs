@@ -48,7 +48,7 @@ commands (all take an optional game; default is the current game):
   remove_photo component=.. photo=<file>
   scan_mats   (the printable scan mats)
   add_scan component=.. file=photo.jpg [mat=teal|magenta] [view=flat|end|side] [taps:='[[x,y]×4]'] [height=MM] [print_scale=..]
-             (measure it from a photo on the mat: taps are the corner markers' centres, 0-1, any order)
+             (measure it from a photo on the mat: corners found, or taps = the corner markers' centres, 0-1, any order)
   set_scan component=.. scan=.. [taps:=..] [mat=..] [view=..] [height=MM] [print_scale=..] [notes=..]
   use_scan component=.. scan=..   |  check_scan component=.. scan=.. dim=long|short calipers=MM  |  remove_scan component=.. scan=..
   add_group id=.. name=..  |  remove_group id=..

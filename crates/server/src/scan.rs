@@ -1,9 +1,9 @@
 //! Measuring a piece from a photo of it on a printed scan mat (PLAN M12, phase 1).
 //!
 //! The mats (`web/mats/`, made by `tools/scanmat/scanmat.py`) carry ArUco markers at known
-//! places round a coloured field. The user taps the four corner markers on the photo; each tap
-//! is pulled onto its marker's centre, and the four give the homography from the mat (mm) to the
-//! photo. The field's colour is keyed out, the largest thing left is the piece, and a box is
+//! places round a coloured field. The corner markers are found from the field (its hue's largest
+//! patch, and that patch's corners), or the user taps them; each is pulled onto its marker's
+//! centre, and the four give the homography from the mat (mm) to the photo. The field's colour is keyed out, the largest thing left is the piece, and a box is
 //! fitted to its outline. A piece's top is nearer the camera than the mat, so it looks larger:
 //! the camera's height (from the homography and the photo's EXIF focal length) and the piece's
 //! own height correct the fit back to the footprint. Every shot gets an overlay image (the cut-out,
@@ -416,6 +416,87 @@ fn order_taps(t: [(f64, f64); 4]) -> [(f64, f64); 4] {
     if d(t[0], t[1]) + d(t[2], t[3]) >= d(t[1], t[2]) + d(t[3], t[0]) { t } else { [t[3], t[0], t[1], t[2]] }
 }
 
+// ---------- finding the mat ----------
+
+/// The corner markers' centres (px, in the mat's order), found without taps: the coloured field
+/// is the largest patch of its hue, its outline's largest quadrilateral is the field's corners,
+/// and those put each corner marker where it is looked for. An error says what wasn't found.
+fn find_corners(img: &RgbImage, mat: &Mat, s: f64) -> Result<[(f64, f64); 4], String> {
+    let Some(rgb) = mat.printed_rgb else { return Err("this mat has no field colour".into()) };
+    let want = hsv(rgb);
+    let (pw, ph) = (img.width() as f64, img.height() as f64);
+    let k = (640.0 / pw.max(ph)).min(1.0);
+    let (w, h) = (((pw * k).round() as u32).max(1), ((ph * k).round() as u32).max(1));
+    let small = image::imageops::thumbnail(img, w, h);
+    let (w, h) = (small.width() as usize, small.height() as usize);
+    // The field's hue, lit or in shade.
+    let mask: Vec<bool> = small.pixels().map(|p| {
+        let c = hsv(p.0);
+        hue_diff(c.h, want.h) < 28.0 && c.s > 0.18 && c.v > 0.07
+    }).collect();
+    let mask = erode(&dilate(&mask, w, h, 2), w, h, 2);
+    let mask = dilate(&erode(&mask, w, h, 1), w, h, 1);
+    let (blob, n) = largest_blob(&mask, w, h).ok_or("no patch of the mat's colour")?;
+    if (n as f64) < (w * h) as f64 * 0.03 {
+        return Err("too little of the mat's colour: is it the right mat, and in the frame?".into());
+    }
+    let mut hull = convex_hull(row_extremes(w, h, |i| blob[i]));
+    if hull.len() < 4 {
+        return Err("the field has no corners".into());
+    }
+    if hull.len() > 120 {
+        let step = hull.len() as f64 / 120.0;
+        hull = (0..120).map(|i| hull[(i as f64 * step) as usize]).collect();
+    }
+    let quad = max_quad(&hull);
+    let quad = order_taps(quad.map(|[x, y]| (x / k, y / k)));
+    let [fx, fy, fw, fh] = mat.field.map(|v| v * s);
+    let field = [[fx, fy], [fx + fw, fy], [fx + fw, fy + fh], [fx, fy + fh]];
+    let hf = homography(&field, &quad.map(|(x, y)| [x, y])).ok_or("the field isn't a quadrilateral")?;
+    let corners = mat.corners();
+    let mut found = [(0.0, 0.0); 4];
+    for (i, m) in corners.iter().enumerate() {
+        let (cx, cy) = (m.centre[0] * s, m.centre[1] * s);
+        let guess = apply(&hf, cx, cy);
+        let a = apply(&hf, cx - m.size * s / 2.0, cy);
+        let b = apply(&hf, cx + m.size * s / 2.0, cy);
+        let size = (a.0 - b.0).hypot(a.1 - b.1);
+        if guess.0 < 0.0 || guess.1 < 0.0 || guess.0 >= pw || guess.1 >= ph {
+            return Err("a corner marker is out of the frame".into());
+        }
+        found[i] = refine_marker(img, guess, size)
+            .filter(|p| (p.0 - guess.0).hypot(p.1 - guess.1) < size * 0.6)
+            .ok_or("a corner marker wasn't where the field put it")?;
+    }
+    Ok(found)
+}
+
+/// The largest-area quadrilateral on a convex polygon's vertices.
+fn max_quad(p: &[[f64; 2]]) -> [[f64; 2]; 4] {
+    let n = p.len();
+    let tri = |a: [f64; 2], b: [f64; 2], c: [f64; 2]| ((b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0])).abs() / 2.0;
+    let (mut best, mut q) = (-1.0, [0, 1, 2, 3]);
+    for i in 0..n {
+        for k in i + 2..n {
+            let (mut bj, mut aj) = (i + 1, -1.0);
+            for j in i + 1..k {
+                let a = tri(p[i], p[j], p[k]);
+                if a > aj { (aj, bj) = (a, j); }
+            }
+            let (mut bl, mut al) = (k, -1.0);
+            for l in (k + 1..n).chain(0..i) {
+                let a = tri(p[i], p[k], p[l]);
+                if a > al { (al, bl) = (a, l); }
+            }
+            if al >= 0.0 && aj + al > best {
+                best = aj + al;
+                q = [i, bj, k, bl];
+            }
+        }
+    }
+    q.map(|i| p[i])
+}
+
 // ---------- measuring ----------
 
 /// What a scan says, for the spec.
@@ -442,7 +523,8 @@ pub struct Measured {
 pub struct ScanInput<'a> {
     pub photo: &'a Path,
     pub mat: &'a Mat,
-    pub taps: [[f64; 2]; 4],
+    /// The four corner markers as tapped, 0–1 of the photo; None finds them.
+    pub taps: Option<[[f64; 2]; 4]>,
     pub focal_35: Option<f64>,
     /// How tall the piece stands in this shot, mm (None: not corrected).
     pub height: Option<f64>,
@@ -465,7 +547,11 @@ pub fn measure(input: &ScanInput) -> Result<Measured, Reason> {
     let s = input.print_scale;
     let corners = mat.corners();
     let mat_pts: [[f64; 2]; 4] = corners.map(|m| [m.centre[0] * s, m.centre[1] * s]);
-    let taps = order_taps(input.taps.map(|[x, y]| (x * pw, y * ph)));
+    let tapped = input.taps.is_some();
+    let taps = match input.taps {
+        Some(t) => order_taps(t.map(|[x, y]| (x * pw, y * ph))),
+        None => find_corners(&img, mat, s).map_err(|why| Reason::new("no_corners", format!("couldn't find the mat's corners by itself ({why}): tap the four corner markers")))?,
+    };
     let h0 = homography(&mat_pts, &taps.map(|(x, y)| [x, y])).ok_or_else(|| bad("the four taps don't make a quadrilateral: tap each corner marker once"))?;
     // Each tap onto its marker's centre, sized from the first guess.
     let mut found = 0;
@@ -484,7 +570,7 @@ pub fn measure(input: &ScanInput) -> Result<Measured, Reason> {
         }
     });
     let mut notes = vec![];
-    if found < 4 {
+    if found < 4 && tapped {
         notes.push(format!("{} of the 4 taps weren't on a marker I could find, so they're used as tapped: tap the middle of each corner marker", 4 - found));
     }
     let h4 = homography(&mat_pts, &refined.map(|(x, y)| [x, y])).ok_or_else(|| bad("the markers don't make a quadrilateral"))?;
@@ -1138,21 +1224,24 @@ mod tests {
             [u, v]
         };
         let focal_35 = f / ((w as f64).hypot(h as f64)) * FRAME_DIAGONAL;
-        let input = ScanInput {
-            photo: &photo,
-            mat: &mat,
-            taps: [tap(2, 2.0), tap(0, -2.5), tap(3, 1.5), tap(1, 2.0)],
-            focal_35: Some(focal_35),
-            height: Some(bt),
-            print_scale: 1.0,
-            overlay: &dir.join("o.jpg"),
-        };
-        let m = measure(&input).unwrap();
-        assert!((m.size[0] - 30.0).abs() < 0.35 && (m.size[1] - 20.0).abs() < 0.35, "{:?} notes {:?}", m.size, m.notes);
-        assert!(m.raw[0] > m.size[0], "the raw outline reads larger: {:?}", m.raw);
-        assert!((m.camera_height - z).abs() < 5.0, "{}", m.camera_height);
-        assert!(m.notes.is_empty(), "{:?}", m.notes);
-        eprintln!("size {:?} raw {:?} fill {} cam {} overlay {}", m.size, m.raw, m.fill, m.camera_height, dir.join("o.jpg").display());
+        // Tapped, and found without taps.
+        for taps in [Some([tap(2, 2.0), tap(0, -2.5), tap(3, 1.5), tap(1, 2.0)]), None] {
+            let input = ScanInput {
+                photo: &photo,
+                mat: &mat,
+                taps,
+                focal_35: Some(focal_35),
+                height: Some(bt),
+                print_scale: 1.0,
+                overlay: &dir.join("o.jpg"),
+            };
+            let m = measure(&input).unwrap();
+            assert!((m.size[0] - 30.0).abs() < 0.35 && (m.size[1] - 20.0).abs() < 0.35, "{:?} notes {:?}", m.size, m.notes);
+            assert!(m.raw[0] > m.size[0], "the raw outline reads larger: {:?}", m.raw);
+            assert!((m.camera_height - z).abs() < 5.0, "{}", m.camera_height);
+            assert!(m.notes.is_empty(), "{:?}", m.notes);
+            eprintln!("tapped {} size {:?} raw {:?} fill {} cam {} overlay {}", taps.is_some(), m.size, m.raw, m.fill, m.camera_height, dir.join("o.jpg").display());
+        }
         if std::env::var_os("BID_KEEP_SCAN_TEST").is_none() {
             let _ = std::fs::remove_dir_all(&dir);
         }
@@ -1166,7 +1255,7 @@ mod tests {
         let env = |k: &str| std::env::var(k).ok();
         let photo_in = PathBuf::from(env("BID_SCAN_PHOTO").expect("BID_SCAN_PHOTO"));
         let bytes = std::fs::read(&photo_in).unwrap();
-        let taps: [[f64; 2]; 4] = serde_json::from_str(&env("BID_SCAN_TAPS").expect("BID_SCAN_TAPS")).unwrap();
+        let taps: Option<[[f64; 2]; 4]> = env("BID_SCAN_TAPS").map(|t| serde_json::from_str(&t).unwrap());
         let dir = std::env::temp_dir().join(format!("bid-scan-real-{}", crate::now_ms()));
         let games = dir.join("games");
         let file = crate::media::save_photo_bytes(&games, "g", "c", &bytes).unwrap();

@@ -502,7 +502,11 @@ Fits BID because a face texture is already a quad straightened to known proporti
       dappled shadow on Magenta read 17.1–17.5 against 18.1, its shadowed sides keyed as field;
       several pieces on the field measure the largest only. Components has "From a photo" beside
       "By hand": mat, thickness, the photo, the taps, and a new component opens with its sizes,
-      top face and overlay filled in (no thickness: the form waits for it, footprint prefilled)
+      top face and overlay filled in (no thickness: the form waits for it, footprint prefilled).
+      Tapping is optional (2026-11-26): the corners are found from the field (the mat's hue, its
+      largest patch's largest quadrilateral, each corner marker looked for where that puts it),
+      on all six real shots so far, portrait or landscape; the tap sheet opens only when that
+      fails, and "Fix corners" opens it prefilled
 - [ ] Phase 1 as planned: `bid scan_mat` / a Components-tab link prints the mat PDF (Letter; A4 later),
       with a scale bar to confirm 100% printing. Upload a top photo as a `scan` (the four mat
       corners tapped, reusing the face-marking UI) → homography → teal keyed out → outline as a
@@ -516,8 +520,7 @@ Fits BID because a face texture is already a quad straightened to known proporti
       and changes show on the scan card. Upload the original file bytes, not a canvas re-encode, so
       the EXIF focal length survives. Open: an upright piece's dark side faces leak into the cut-out
       (on-end 2× read 9.0 × 15.3 against 8.05 × 15.7); the overlay is what lets a user catch it
-- [ ] Phase 2: markers found automatically (ArUco decoding in Rust, no OpenCV dependency if
-      avoidable), several pieces per photo (count, size spread flagged), a side photo for
+- [ ] Phase 2: ArUco IDs decoded (corners are already found without it, from the field), several pieces per photo (count, size spread flagged), a side photo for
       height and profile
 - [ ] Phase 3: fitted pockets for `Outline::Irregular` (outline + 0.8 mm tolerance, cut into
       the tray in `geometry.rs`); six views → visual hull as the component's 3D ghost

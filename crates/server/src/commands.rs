@@ -242,7 +242,7 @@ pub enum Command {
     /// A photo of a component lying on a scan mat, to measure it: `data` the original file
     /// (base64 or a data URL; not re-encoded, so its EXIF focal length survives), `mat` (teal,
     /// magenta), `view` flat | end | side, `taps` the four corner markers' centres on the photo
-    /// (0–1, any order round the mat), `height` how tall it stands in the shot (mm; default its
+    /// (0–1, any order round the mat; optional: without them the corners are found), `height` how tall it stands in the shot (mm; default its
     /// measured thickness when flat), `print_scale` (the mat's 200 mm ruler as printed ÷ 200).
     AddScan {
         component: String,
@@ -2069,16 +2069,14 @@ pub fn scan_value(app: &App, game: &str, sc: &spec::Scan) -> Value {
     v
 }
 
-/// Measure a scan (again) from its taps, and keep what it says, or why it couldn't. A fresh
+/// Measure a scan (again), from its taps or with its corners found, and keep what it says, or why it couldn't. A fresh
 /// measurement asks the agent to review it, unless a request on it is still open.
 async fn remeasure(app: &std::sync::Arc<App>, game: &str, component: &str, id: &str) -> Result<String, Reason> {
     let s = spec::load(&app.games, game)?;
     let c = s.component(component).ok_or_else(|| no_component(&s, component))?;
     let sc = c.scans.iter().find(|x| x.id == id).ok_or_else(|| no_scan(component, id))?.clone();
     let name = c.name.clone();
-    let Some(taps) = sc.taps else {
-        return Ok(format!("scan {id} saved: tap the four corner markers on it to measure it"));
-    };
+    let taps = sc.taps;
     let (games, g, sid) = (app.games.clone(), game.to_string(), id.to_string());
     let sc2 = sc.clone();
     let res = tokio::task::spawn_blocking(move || {
