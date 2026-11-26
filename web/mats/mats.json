@@ -142,6 +142,69 @@
           "size": 20.0
         }
       ]
+    },
+    {
+      "key": "white",
+      "name": "White",
+      "file": "scan-mat-white-letter.pdf",
+      "use": "For checking the print's size against a ruler. No field colour, so not for scans.",
+      "printed_rgb": null,
+      "field": [
+        36.0,
+        36.0,
+        207.4,
+        143.9
+      ],
+      "markers": [
+        {
+          "id": 12,
+          "centre": [
+            16.5,
+            16.5
+          ],
+          "size": 20.0
+        },
+        {
+          "id": 13,
+          "centre": [
+            139.7,
+            16.5
+          ],
+          "size": 20.0
+        },
+        {
+          "id": 14,
+          "centre": [
+            262.9,
+            16.5
+          ],
+          "size": 20.0
+        },
+        {
+          "id": 15,
+          "centre": [
+            16.5,
+            199.4
+          ],
+          "size": 20.0
+        },
+        {
+          "id": 16,
+          "centre": [
+            139.7,
+            199.4
+          ],
+          "size": 20.0
+        },
+        {
+          "id": 17,
+          "centre": [
+            262.9,
+            199.4
+          ],
+          "size": 20.0
+        }
+      ]
     }
   ]
 }

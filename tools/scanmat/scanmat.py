@@ -15,7 +15,7 @@ Standard library only, so it runs anywhere; the PDF is written by hand (Helvetic
 import json
 import os
 
-# ArUco DICT_4X4_50, IDs 0-11: the 4x4 data cells inside the one-cell black border, rows top to
+# ArUco DICT_4X4_50, IDs 0-17: the 4x4 data cells inside the one-cell black border, rows top to
 # bottom, 1 = white. Taken from OpenCV's dictionary (cv2.aruco.generateImageMarker).
 ARUCO_4X4 = {
     0: ["1011", "0101", "0011", "0010"], 1: ["0000", "1111", "1001", "1010"],
@@ -24,6 +24,9 @@ ARUCO_4X4 = {
     6: ["1001", "1110", "0010", "1110"], 7: ["1100", "0100", "1111", "0010"],
     8: ["1111", "1110", "1101", "1010"], 9: ["1100", "1111", "0101", "0110"],
     10: ["1111", "1001", "1001", "0001"], 11: ["0001", "0001", "1010", "0111"],
+    12: ["0000", "1110", "1011", "0111"], 13: ["0010", "1010", "0000", "1111"],
+    14: ["0010", "0100", "1011", "0001"], 15: ["0010", "0110", "0011", "1110"],
+    16: ["0100", "0110", "0110", "0101"], 17: ["0110", "0110", "0000", "0000"],
 }
 
 VERSION = 1
@@ -33,12 +36,15 @@ INSET = 16.5                           # marker centre from the page edges
 RULER = 9.0                            # depth of the ruler strip on each side of the field
 FIELD = 36.0                           # field inset from the page edges
 
-# Two colours far apart, so a piece close to one keys out cleanly on the other.
+# Two colours far apart, so a piece close to one keys out cleanly on the other. White has no
+# field colour: it is for checking the print's size and the rulers, not for keying.
 MATS = [
     {"key": "teal", "name": "Teal", "rgb": (0.17, 0.55, 0.49), "ids": [0, 1, 2, 3, 4, 5],
      "use": "The default. Use Magenta for green, teal or blue pieces."},
     {"key": "magenta", "name": "Magenta", "rgb": (0.80, 0.20, 0.55), "ids": [6, 7, 8, 9, 10, 11],
      "use": "For green, teal or blue pieces. Use Teal for red, pink or purple ones."},
+    {"key": "white", "name": "White", "rgb": None, "ids": [12, 13, 14, 15, 16, 17],
+     "use": "For checking the print's size against a ruler. No field colour, so not for scans."},
 ]
 
 PT = 72 / 25.4
@@ -86,8 +92,9 @@ def draw_marker(p, cx, cy, mid):
 def draw_mat(mat):
     p = Page()
     fx, fy, fw, fh = FIELD, FIELD, PAGE_W - 2 * FIELD, PAGE_H - 2 * FIELD
-    p.fill(mat["rgb"])
-    p.rect(fx, fy, fw, fh)
+    if mat["rgb"]:
+        p.fill(mat["rgb"])
+        p.rect(fx, fy, fw, fh)
 
     # A ruler on each side of the field: a light strip with mm ticks from the field's edge
     # (1 mm, longer every 5, longest every 10) and figures every 10 mm, counted from the
@@ -180,7 +187,7 @@ def main():
             f.write(pdf(draw_mat(mat)))
         spec["mats"].append({
             "key": mat["key"], "name": mat["name"], "file": file, "use": mat["use"],
-            "printed_rgb": [round(c * 255) for c in mat["rgb"]],
+            "printed_rgb": [round(c * 255) for c in mat["rgb"]] if mat["rgb"] else None,
             "field": [FIELD, FIELD, round(PAGE_W - 2 * FIELD, 2), round(PAGE_H - 2 * FIELD, 2)],
             "markers": [{"id": mid, "centre": [round(x, 2), round(y, 2)], "size": MARKER}
                         for (x, y), mid in zip(marker_centres(), mat["ids"])],
