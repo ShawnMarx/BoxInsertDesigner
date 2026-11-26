@@ -100,6 +100,21 @@ def draw_mat(mat):
         p.rect(fx - L, fy + i - t / 2, L, t)
         p.rect(fx + fw, fy + i - t / 2, L, t)
 
+    # mm figures every 10, counted from the field's top-left corner; skipped where the middle
+    # markers sit. Helvetica digits are 0.556 em wide, so the figures can be centred.
+    fs = 4.6
+    digit = 0.556 * fs / PT
+    for i in range(0, int(fw) + 1, 10):
+        s, x = str(i), fx + i
+        if abs(x - PAGE_W / 2) < 13:
+            continue
+        p.text(x - len(s) * digit / 2, fy - 4.6, fs, s)
+        p.text(x - len(s) * digit / 2, fy + fh + 5.8, fs, s)
+    for j in range(0, int(fh) + 1, 10):
+        s, y = str(j), fy + j + 0.6
+        p.text(fx - 4.8 - len(s) * digit, y, fs, s)
+        p.text(fx + fw + 4.8, y, fs, s)
+
     for (cx, cy), mid in zip(marker_centres(), mat["ids"]):
         draw_marker(p, cx, cy, mid)
 
