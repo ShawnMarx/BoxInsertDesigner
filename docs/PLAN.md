@@ -466,7 +466,9 @@ Fits BID because a face texture is already a quad straightened to known proporti
       flat (centres within 0.07 mm) and after a simulated handheld tilt at half resolution
 - Print scale (2026-11-26, Shawn's printer, from Windows): mats came out at 97.2% in both directions
   (100 mm bar → 97, 200 mm ruler → 194.5) even at "Actual size": the driver fits the page to
-  its printable area. So phase 1 keeps a per-printer scale (the measured 200 mm ruler / 200) and
+  its printable area. Windows' generic IPP class driver ignored "Scaling: None"; the maker's
+  full driver (Scaling: Off) printed it at 100%. Not everyone will find that, so phase 1 still
+  keeps a per-printer scale (the measured 200 mm ruler / 200) and
   applies it to every scan; White mat (IDs 12–17, no field colour) is the sizing check
 - [ ] Phase 1: `bid scan_mat` / a Components-tab link prints the mat PDF (Letter; A4 later),
       with a scale bar to confirm 100% printing. Upload a top photo as a `scan` (the four mat
