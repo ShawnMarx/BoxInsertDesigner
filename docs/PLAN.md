@@ -478,7 +478,10 @@ Fits BID because a face texture is already a quad straightened to known proporti
   EXIF focal length (35 mm-equiv) before `save_photo` strips it, and treats a tall piece's
   outline as top-face-enlarged. Paper flatness: marker corners fit the plane to 0.34 mm mean
   Calipers: 18.1 mm. At 36–48 mm-equiv the fits are 17.8 / 18.3 (within 0.3 mm; the dice's
-  rounded edges shave the outline); at 1× they'd be 0.3–0.6 mm small. Focal length matters
+  rounded edges shave the outline); at 1× they'd be 0.3–0.6 mm small. Focal length matters.
+  It was shot at 1×, so the 1× fit is 0.3–0.6 mm small: either the upload was cropped or
+  resized (2576 × 1932, no EXIF), or the correction is off. Next: a 2× shot, sent as the
+  original file so its EXIF focal length survives
 - [ ] Phase 1: `bid scan_mat` / a Components-tab link prints the mat PDF (Letter; A4 later),
       with a scale bar to confirm 100% printing. Upload a top photo as a `scan` (the four mat
       corners tapped, reusing the face-marking UI) → homography → teal keyed out → outline as a
