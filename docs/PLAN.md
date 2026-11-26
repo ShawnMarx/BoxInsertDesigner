@@ -481,7 +481,13 @@ Fits BID because a face texture is already a quad straightened to known proporti
   rounded edges shave the outline); at 1× they'd be 0.3–0.6 mm small. Focal length matters.
   It was shot at 1×, so the 1× fit is 0.3–0.6 mm small: either the upload was cropped or
   resized (2576 × 1932, no EXIF), or the correction is off. Next: a 2× shot, sent as the
-  original file so its EXIF focal length survives
+  original file so its EXIF focal length survives.
+  Second test (a wooden book token, Teal mat, calipers 15.7 × 19.0 × 8.05): footprint from a box
+  fit (sides seen, top raised) 15.73 × 19.35 at 2× and 15.52 × 19.23 at 1×, within 0.35 mm.
+  Thickness from the token stood on end: 8.3 (1×) / 9.0 (2×), poor: the end isn't a rectangle
+  and its top is 19 mm up. Lessons: a piece's own shadow is dark and must count as field (key
+  on hue, let very dark pixels go to the field); scaling the whole outline down to the top
+  face overstates by the sides seen, so fit a solid; height stays a caliper (or side-view) job
 - [ ] Phase 1: `bid scan_mat` / a Components-tab link prints the mat PDF (Letter; A4 later),
       with a scale bar to confirm 100% printing. Upload a top photo as a `scan` (the four mat
       corners tapped, reusing the face-marking UI) → homography → teal keyed out → outline as a
