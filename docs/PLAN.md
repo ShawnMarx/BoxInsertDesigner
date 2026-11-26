@@ -493,6 +493,14 @@ Fits BID because a face texture is already a quad straightened to known proporti
       corners tapped, reusing the face-marking UI) → homography → teal keyed out → outline as a
       polygon in mm → `measure.piece` width/depth filled in, outline stored, crop kept as the
       `top` face. Height still typed (calipers). Check against calipers on a few Anachrony pieces
+      Every shot (flat, on end, on side) shows its own overlay: the straightened crop, the cut-out,
+      the fitted box and dimension labels, the fit %. On it: "Use these sizes", a spot check per
+      dimension (calipers say X → the difference is recorded) and "Tell the agent". Each scan opens
+      a request on the component (requests today live only on trays and pieces); the agent gets the
+      overlay image as well as the numbers (the app's own agent as an image block), and its reply
+      and changes show on the scan card. Upload the original file bytes, not a canvas re-encode, so
+      the EXIF focal length survives. Open: an upright piece's dark side faces leak into the cut-out
+      (on-end 2× read 9.0 × 15.3 against 8.05 × 15.7); the overlay is what lets a user catch it
 - [ ] Phase 2: markers found automatically (ArUco decoding in Rust, no OpenCV dependency if
       avoidable), several pieces per photo (count, size spread flagged), a side photo for
       height and profile
