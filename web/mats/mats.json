@@ -1,0 +1,147 @@
+{
+  "version": 1,
+  "units": "mm",
+  "origin": "page top-left, y down",
+  "dictionary": "aruco_4x4_50",
+  "paper": "letter",
+  "page": [
+    279.4,
+    215.9
+  ],
+  "mats": [
+    {
+      "key": "teal",
+      "name": "Teal",
+      "file": "scan-mat-teal-letter.pdf",
+      "use": "The default. Use Magenta for green, teal or blue pieces.",
+      "printed_rgb": [
+        43,
+        140,
+        125
+      ],
+      "field": [
+        36.0,
+        36.0,
+        207.4,
+        143.9
+      ],
+      "markers": [
+        {
+          "id": 0,
+          "centre": [
+            20.0,
+            20.0
+          ],
+          "size": 20.0
+        },
+        {
+          "id": 1,
+          "centre": [
+            139.7,
+            20.0
+          ],
+          "size": 20.0
+        },
+        {
+          "id": 2,
+          "centre": [
+            259.4,
+            20.0
+          ],
+          "size": 20.0
+        },
+        {
+          "id": 3,
+          "centre": [
+            20.0,
+            195.9
+          ],
+          "size": 20.0
+        },
+        {
+          "id": 4,
+          "centre": [
+            139.7,
+            195.9
+          ],
+          "size": 20.0
+        },
+        {
+          "id": 5,
+          "centre": [
+            259.4,
+            195.9
+          ],
+          "size": 20.0
+        }
+      ]
+    },
+    {
+      "key": "magenta",
+      "name": "Magenta",
+      "file": "scan-mat-magenta-letter.pdf",
+      "use": "For green, teal or blue pieces. Use Teal for red, pink or purple ones.",
+      "printed_rgb": [
+        204,
+        51,
+        140
+      ],
+      "field": [
+        36.0,
+        36.0,
+        207.4,
+        143.9
+      ],
+      "markers": [
+        {
+          "id": 6,
+          "centre": [
+            20.0,
+            20.0
+          ],
+          "size": 20.0
+        },
+        {
+          "id": 7,
+          "centre": [
+            139.7,
+            20.0
+          ],
+          "size": 20.0
+        },
+        {
+          "id": 8,
+          "centre": [
+            259.4,
+            20.0
+          ],
+          "size": 20.0
+        },
+        {
+          "id": 9,
+          "centre": [
+            20.0,
+            195.9
+          ],
+          "size": 20.0
+        },
+        {
+          "id": 10,
+          "centre": [
+            139.7,
+            195.9
+          ],
+          "size": 20.0
+        },
+        {
+          "id": 11,
+          "centre": [
+            259.4,
+            195.9
+          ],
+          "size": 20.0
+        }
+      ]
+    }
+  ]
+}

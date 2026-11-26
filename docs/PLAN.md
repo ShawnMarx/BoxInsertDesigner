@@ -460,6 +460,10 @@ past the legs so they stay out of the shot); the object is shot six ways (four s
 Each photo straightens to a true-scale view, and the object is whatever isn't teal.
 Fits BID because a face texture is already a quad straightened to known proportions
 (`media.rs`); here the mat is the known size, so the photo yields the measurements.
+- [x] Mats (2026-11-26): `tools/scanmat/scanmat.py` writes Letter PDFs to `web/mats/` (served at
+      `/mats/`), Teal (ArUco 4x4_50 IDs 0–5) and Magenta (IDs 6–11, for green/teal/blue pieces),
+      and `mats.json` with marker centres and the field in mm. Checked with OpenCV: all six found
+      flat (centres within 0.07 mm) and after a simulated handheld tilt at half resolution
 - [ ] Phase 1: `bid scan_mat` / a Components-tab link prints the mat PDF (Letter; A4 later),
       with a scale bar to confirm 100% printing. Upload a top photo as a `scan` (the four mat
       corners tapped, reusing the face-marking UI) → homography → teal keyed out → outline as a
