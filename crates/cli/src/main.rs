@@ -46,6 +46,11 @@ commands (all take an optional game; default is the current game):
   add_photo component=.. file=photo.jpg [note=..]  |  set_photo_note component=.. photo=<file> note=..
   set_face component=.. face=top|front photo=<file> corners:='[[x,y],[x,y],[x,y],[x,y]]'   (0-1, TL TR BR BL)
   remove_photo component=.. photo=<file>
+  scan_mats   (the printable scan mats)
+  add_scan component=.. file=photo.jpg [mat=teal|magenta] [view=flat|end|side] [taps:='[[x,y]×4]'] [height=MM] [print_scale=..]
+             (measure it from a photo on the mat: taps are the corner markers' centres, 0-1, any order)
+  set_scan component=.. scan=.. [taps:=..] [mat=..] [view=..] [height=MM] [print_scale=..] [notes=..]
+  use_scan component=.. scan=..   |  check_scan component=.. scan=.. dim=long|short calipers=MM  |  remove_scan component=.. scan=..
   add_group id=.. name=..  |  remove_group id=..
   add_sleeve id=.. name=.. per_card_mm=..
   set_style [walls.normal=2.0] [tolerance.print_to_component=0.8] [floor.min=..] ...   (no args: show it)

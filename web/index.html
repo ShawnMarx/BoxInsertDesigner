@@ -116,6 +116,23 @@
     </section>
     <aside id="plate-panel" class="panel"></aside>
   </main>
+  <div id="scan-sheet" class="sheet" hidden>
+    <div class="sheet-panel" role="dialog" aria-modal="true" aria-labelledby="scan-sheet-title">
+      <div class="sheet-head">
+        <h2 id="scan-sheet-title">Tap the mat's corners</h2>
+        <button id="scan-sheet-close" class="toggle" aria-label="Close">Cancel</button>
+      </div>
+      <p class="small">Tap the middle of each of the four <b>corner</b> markers (the black squares), in any order round the mat. Tap near one again to move it.</p>
+      <div id="scan-stage" class="crop-stage">
+        <img id="scan-img" alt="Scan photo">
+        <svg id="scan-svg" class="crop-svg"></svg>
+      </div>
+      <div class="toggles">
+        <button id="scan-measure" class="primary" disabled>Measure</button>
+        <button id="scan-clear" class="toggle">Clear taps</button>
+      </div>
+    </div>
+  </div>
   <div id="sheet" class="sheet" hidden>
     <div class="sheet-panel" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
       <div class="sheet-head">

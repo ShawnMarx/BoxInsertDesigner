@@ -36,6 +36,7 @@ export function initComponents(a) {
   api = a;
   $('comp-add').addEventListener('click', () => { newKind = null; edit('new'); });
   $('box-add-comp').addEventListener('click', () => { newKind = 'box'; edit('new'); });
+  initScanSheet();
 }
 
 export function editComponent(id) {
@@ -235,6 +236,8 @@ function renderEditor(c) {
         ${(c.photos || []).length ? `<button type="button" class="toggle" id="comp-faces">${c.kind === 'box' ? 'Mark the lid’s top, front and side' : 'Mark faces for the 3D view'}</button>` : ''}
       </div></fieldset>` : '<p class="muted small">Photos can be added once it is saved.</p>'}
 
+    ${c && c.kind !== 'box' ? scanSection(c) : ''}
+
     <p id="comp-err" class="bad small" hidden></p>
     <div class="form-actions">
       ${c ? '<button type="button" class="toggle danger" id="comp-del">Delete</button>' : ''}
@@ -386,6 +389,7 @@ function renderEditor(c) {
       x.addEventListener('change', () => api.command({ cmd: 'set_photo_note', component: c.id, photo: x.dataset.photoNote, note: x.value.trim() || null }));
     }
     $('comp-faces')?.addEventListener('click', () => api.openSheet(c.id));
+    if (c.kind !== 'box') wireScans(c);
     $('comp-photo').addEventListener('change', async (e) => {
       const file = e.target.files[0];
       e.target.value = '';
@@ -402,4 +406,176 @@ function renderEditor(c) {
       if (v.ok) { api.toast('Photo added'); editorKey = null; await api.refresh(); }
     });
   }
+}
+
+// ---------- scans: measuring a piece from a photo on the scan mat (PLAN M12) ----------
+
+const MATS = [['teal', 'Teal', 'scan-mat-teal-letter.pdf'], ['magenta', 'Magenta', 'scan-mat-magenta-letter.pdf'], ['white', 'White (size check)', 'scan-mat-white-letter.pdf']];
+const VIEWS = [['flat', 'Lying flat: its footprint'], ['end', 'Stood on end: its thickness'], ['side', 'On its side: its thickness']];
+const fmt2 = (v) => (+v).toFixed(2).replace(/\.?0+$/, '');
+const scanPrefs = () => { try { return JSON.parse(localStorage.getItem('bid-scan') || '{}'); } catch { return {}; } };
+const saveScanPrefs = (p) => { try { localStorage.setItem('bid-scan', JSON.stringify({ ...scanPrefs(), ...p })); } catch { /* private window */ } };
+
+function lastScale() {
+  const all = (api.state()?.spec?.components || []).flatMap((x) => x.scans || []);
+  all.sort((a, b) => b.created_ms - a.created_ms);
+  return all[0]?.print_scale ?? 1;
+}
+
+function scanSection(c) {
+  const prefs = scanPrefs();
+  const scans = [...(c.scans || [])].reverse();
+  const ruler = Math.round(lastScale() * 200 * 10) / 10;
+  return `<fieldset><legend>Measure from a photo <span class="muted small">— on the scan mat</span></legend>
+    <div class="scan-tools">
+      <p class="small muted">Print a mat at 100%, Letter landscape: ${MATS.map(([, n, f]) => `<a href="/mats/${f}" target="_blank" rel="noopener">${esc(n)}</a>`).join(' · ')}. Lay the piece in the middle of the coloured field, shoot straight down from 30–40 cm (2× lens if you have one), and send the original photo.</p>
+      <div class="two">
+        <label>Mat <select id="scan-mat">${MATS.slice(0, 2).map(([k, n]) => `<option value="${k}" ${(prefs.mat || 'teal') === k ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select></label>
+        <label>The piece is <select id="scan-view">${VIEWS.map(([k, n]) => `<option value="${k}">${esc(n)}</option>`).join('')}</select></label>
+      </div>
+      <div class="two">
+        <label>How tall it stands, mm <span class="muted small">— calipers; corrects for its top being nearer the camera</span>
+          <input id="scan-height" type="number" step="0.01" min="0" inputmode="decimal" value="${num(c.measure?.piece?.[2])}"></label>
+        <label>The mat's 200 mm ruler measures, mm <span class="muted small">— some printers shrink the page</span>
+          <input id="scan-ruler" type="number" step="0.1" min="160" max="240" inputmode="decimal" value="${ruler}"></label>
+      </div>
+      <div class="toggles"><label class="primary file-btn">Add a scan photo<input id="scan-file" type="file" accept="image/jpeg" hidden></label></div>
+      <div class="scan-list">${scans.map((x) => scanCard(c, x)).join('')}</div>
+    </div></fieldset>`;
+}
+
+function scanCard(c, x) {
+  const r = x.result;
+  const g = encodeURIComponent(api.game());
+  const view = (VIEWS.find(([k]) => k === x.view) || [, x.view])[1];
+  const check = (dim, v) => {
+    const ck = (x.checks || []).find((k) => k.dim === dim);
+    return `<label>${dim === 'long' ? 'Long' : 'Short'} side by calipers <input type="number" step="0.01" min="0" inputmode="decimal" data-scan-check="${esc(x.id)}" data-dim="${dim}" value="${ck ? ck.calipers : ''}">
+      ${ck ? `<span class="small ${Math.abs(ck.scan - ck.calipers) <= 0.35 ? 'good' : 'warn'}">scan ${fmt2(ck.scan)}: ${ck.scan - ck.calipers >= 0 ? '+' : ''}${(ck.scan - ck.calipers).toFixed(2)} mm</span>` : `<span class="small muted">scan says ${fmt2(v)}</span>`}</label>`;
+  };
+  return `<div class="scan-card" data-scan="${esc(x.id)}">
+    <div class="sheet-head"><span class="small muted">${esc(view)} · ${esc(x.mat)} mat · ${new Date(x.created_ms).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</span>
+      ${x.used_ms ? '<span class="badge">used</span>' : ''}</div>
+    ${r ? `<a href="/api/games/${g}/media/scans/${encodeURIComponent(x.id)}.jpg?v=${r.measured_ms}" target="_blank" rel="noopener"><img class="overlay" src="/api/games/${g}/media/scans/${encodeURIComponent(x.id)}.jpg?v=${r.measured_ms}" alt="The cut-out and the box fitted to it"></a>
+      <div class="scan-size">${fmt2(r.size[0])} × ${fmt2(r.size[1])} mm</div>
+      <p class="small muted">Outline as it lies ${fmt2(r.raw[0])} × ${fmt2(r.raw[1])} mm, ${x.height ? `corrected for ${fmt2(x.height)} mm tall` : 'not corrected for height'} · ${Math.round(r.fill * 100)}% of its box filled · camera ${r.camera_height} mm up · ${r.focal_35}${r.focal_assumed ? ' (assumed)' : ''} mm lens${x.print_scale !== 1 ? ` · mat printed at ${(x.print_scale * 100).toFixed(1)}%` : ''}</p>
+      ${(r.notes || []).map((n) => `<p class="small warn">${esc(n)}</p>`).join('')}
+      <p class="small muted">Yellow is what stood out from the mat, cyan its box, magenta the footprint fitted. If the yellow isn't the piece, redo the corners or shoot it again.</p>
+      <div class="scan-checks">${check('long', r.size[0])}${check('short', r.size[1])}</div>`
+    : x.problem ? `<p class="small bad">Couldn't measure it: ${esc(x.problem)}</p>` : '<p class="small warn">Not measured yet: tap the mat’s corners.</p>'}
+    ${x.request ? api.requestNote(x.request) : ''}
+    <label class="small">Tell the agent <span class="muted">— what looks wrong, or what to do with it</span>
+      <textarea rows="2" data-scan-notes="${esc(x.id)}" placeholder="The cut-out includes its shadow on the left…"></textarea></label>
+    <div class="form-actions">
+      <button type="button" class="toggle danger" data-scan-remove="${esc(x.id)}">Remove</button>
+      <button type="button" class="toggle" data-scan-taps="${esc(x.id)}">${x.taps ? 'Redo corners' : 'Tap corners'}</button>
+      <button type="button" class="toggle" data-scan-send="${esc(x.id)}">Tell the agent</button>
+      <span class="spacer"></span>
+      ${r ? `<button type="button" class="primary" data-scan-use="${esc(x.id)}">${x.view === 'flat' ? 'Use these sizes' : 'Use as its thickness'}</button>` : ''}
+    </div>
+  </div>`;
+}
+
+function wireScans(c) {
+  const f = $('comp-form');
+  const q = (sel) => f.querySelectorAll(sel);
+  $('scan-mat')?.addEventListener('change', (e) => saveScanPrefs({ mat: e.target.value }));
+  $('scan-view')?.addEventListener('change', (e) => {
+    // Flat: it stands as thick as it is; on end or side the user types it.
+    $('scan-height').value = e.target.value === 'flat' ? num(c.measure?.piece?.[2]) : '';
+  });
+  $('scan-file')?.addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    e.target.value = '';
+    if (!file) return;
+    api.toast('Uploading the scan…');
+    // The original bytes, not a canvas copy: its EXIF focal length is needed.
+    const data = await new Promise((ok, no) => { const r = new FileReader(); r.onload = () => ok(r.result); r.onerror = no; r.readAsDataURL(file); });
+    const ruler = +$('scan-ruler').value;
+    const body = { cmd: 'add_scan', component: c.id, data, mat: $('scan-mat').value, view: $('scan-view').value };
+    if (+$('scan-height').value > 0) body.height = +$('scan-height').value;
+    if (ruler > 0) body.print_scale = Math.round(ruler / 200 * 10000) / 10000;
+    const v = await api.command(body);
+    if (!v.ok) return;
+    editorKey = null;
+    await api.refresh();
+    openTaps(c.id, v.data);
+  });
+  for (const b of q('[data-scan-taps]')) b.addEventListener('click', () => {
+    const x = c.scans.find((s) => s.id === b.dataset.scanTaps);
+    openTaps(c.id, { ...x, photo_url: `/api/games/${encodeURIComponent(api.game())}/media/photos/${encodeURIComponent(x.photo)}` });
+  });
+  for (const b of q('[data-scan-use]')) b.addEventListener('click', async () => {
+    const v = await api.command({ cmd: 'use_scan', component: c.id, scan: b.dataset.scanUse });
+    if (v.ok) { api.toast(v.message); editorKey = null; await api.refresh(); }
+  });
+  for (const b of q('[data-scan-remove]')) b.addEventListener('click', async () => {
+    if (!confirm('Remove this scan?')) return;
+    const v = await api.command({ cmd: 'remove_scan', component: c.id, scan: b.dataset.scanRemove });
+    if (v.ok) { editorKey = null; await api.refresh(); }
+  });
+  for (const b of q('[data-scan-send]')) b.addEventListener('click', async () => {
+    const t = f.querySelector(`[data-scan-notes="${b.dataset.scanSend}"]`);
+    const text = t.value.trim();
+    if (!text) { t.focus(); return api.toast('Say what to tell the agent first'); }
+    const v = await api.command({ cmd: 'set_scan', component: c.id, scan: b.dataset.scanSend, notes: text });
+    if (v.ok) { api.toast('Sent to the agent'); editorKey = null; await api.refresh(); }
+  });
+  for (const i of q('[data-scan-check]')) i.addEventListener('change', async () => {
+    if (!(+i.value > 0)) return;
+    const v = await api.command({ cmd: 'check_scan', component: c.id, scan: i.dataset.scanCheck, dim: i.dataset.dim, calipers: +i.value });
+    if (v.ok) { api.toast(v.message.replace(/^scan \S+: /, '')); editorKey = null; await api.refresh(); }
+  });
+}
+
+// The tap sheet: four corner markers, tapped on the photo.
+let taps = [];
+let tapping = null;
+function openTaps(component, scan) {
+  tapping = { component, scan: scan.id };
+  taps = (scan.taps || []).map((p) => [...p]);
+  $('scan-img').src = scan.photo_url || `/api/games/${encodeURIComponent(api.game())}/media/photos/${encodeURIComponent(scan.photo)}`;
+  $('scan-sheet').hidden = false;
+  drawTaps();
+}
+
+function drawTaps() {
+  const img = $('scan-img');
+  const svg = $('scan-svg');
+  const w = img.clientWidth || 1, h = img.clientHeight || 1;
+  svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+  svg.innerHTML = taps.map(([x, y], i) => `<circle cx="${x * w}" cy="${y * h}" r="9"></circle><text x="${x * w + 12}" y="${y * h - 10}">${i + 1}</text>`).join('');
+  $('scan-measure').disabled = taps.length !== 4;
+}
+
+function initScanSheet() {
+  const img = $('scan-img');
+  img.addEventListener('load', drawTaps);
+  addEventListener('resize', () => { if (!$('scan-sheet').hidden) drawTaps(); });
+  $('scan-stage').addEventListener('pointerdown', (e) => {
+    const r = img.getBoundingClientRect();
+    const p = [Math.min(1, Math.max(0, (e.clientX - r.left) / r.width)), Math.min(1, Math.max(0, (e.clientY - r.top) / r.height))];
+    if (taps.length < 4) taps.push(p);
+    else {
+      // Move the nearest one.
+      const d = taps.map(([x, y]) => Math.hypot((x - p[0]) * r.width, (y - p[1]) * r.height));
+      taps[d.indexOf(Math.min(...d))] = p;
+    }
+    drawTaps();
+  });
+  $('scan-clear').addEventListener('click', () => { taps = []; drawTaps(); });
+  $('scan-sheet-close').addEventListener('click', () => { $('scan-sheet').hidden = true; tapping = null; });
+  $('scan-measure').addEventListener('click', async () => {
+    if (!tapping || taps.length !== 4) return;
+    $('scan-measure').disabled = true;
+    api.toast('Measuring…');
+    const v = await api.command({ cmd: 'set_scan', component: tapping.component, scan: tapping.scan, taps });
+    $('scan-measure').disabled = false;
+    if (!v.ok) return;
+    api.toast(v.message.replace(/^scan \S+: /, ''));
+    $('scan-sheet').hidden = true;
+    tapping = null;
+    editorKey = null;
+    await api.refresh();
+  });
 }

@@ -237,6 +237,50 @@ pub enum Command {
         component: String,
         photo: String,
     },
+    /// The printable scan mats (PDFs served at `/mats/`).
+    ScanMats,
+    /// A photo of a component lying on a scan mat, to measure it: `data` the original file
+    /// (base64 or a data URL; not re-encoded, so its EXIF focal length survives), `mat` (teal,
+    /// magenta), `view` flat | end | side, `taps` the four corner markers' centres on the photo
+    /// (0–1, any order round the mat), `height` how tall it stands in the shot (mm; default its
+    /// measured thickness when flat), `print_scale` (the mat's 200 mm ruler as printed ÷ 200).
+    AddScan {
+        component: String,
+        data: String,
+        mat: Option<String>,
+        view: Option<String>,
+        taps: Option<[[f64; 2]; 4]>,
+        height: Option<f64>,
+        print_scale: Option<f64>,
+    },
+    /// Change a scan and measure it again; `notes` is a request for the agent about it.
+    SetScan {
+        component: String,
+        scan: String,
+        mat: Option<String>,
+        view: Option<String>,
+        taps: Option<[[f64; 2]; 4]>,
+        height: Option<f64>,
+        print_scale: Option<f64>,
+        notes: Option<String>,
+    },
+    /// Put a scan's sizes into the component's measure (flat: width and depth; end or side: its
+    /// thickness), and its top face from the photo.
+    UseScan {
+        component: String,
+        scan: String,
+    },
+    /// A caliper reading against a scan: `dim` long | short, `calipers` mm.
+    CheckScan {
+        component: String,
+        scan: String,
+        dim: String,
+        calipers: f64,
+    },
+    RemoveScan {
+        component: String,
+        scan: String,
+    },
     /// Every strategy's layout for a box, compared. Doesn't change the spec.
     GenerateLayouts {
         #[serde(rename = "box")]
@@ -551,6 +595,21 @@ pub fn collect_requests(app: &App, games: &[String], keep: impl Fn(RequestStatus
                     "note": "an imported piece: its geometry isn't generated, so a change to its shape needs a new import" },
             }));
         }
+        for c in &s.components {
+            for sc in &c.scans {
+                let Some(r) = &sc.request else { continue };
+                if !keep(r.status) {
+                    continue;
+                }
+                out.push(json!({
+                    "game": g, "game_name": s.game.name, "box": c.box_, "tray": null, "tray_name": format!("{} (scan)", c.name),
+                    "component": c.id, "in_layout": true, "request": r,
+                    "scan": scan_value(app, g, sc),
+                    "component_detail": { "id": c.id, "name": c.name, "kind": c.kind_name(), "measure": c.measure, "notes": c.notes },
+                    "note": "a scan of the component on the scan mat: overlay_file is the picture to check (yellow: the cut-out; cyan: its box; magenta: the footprint fitted). set_scan (taps, height, mat, view) measures it again, use_scan puts its sizes in the component",
+                }));
+            }
+        }
     }
     out.sort_by_key(|v| std::cmp::Reverse(v["request"]["updated_ms"].as_u64().unwrap_or(0)));
     out
@@ -702,6 +761,181 @@ pub async fn run(app: &std::sync::Arc<App>, req: Request) -> Result<Value, Reaso
             data["style"] = serde_json::to_value(&st).unwrap();
             Ok(ok(&game, format!("style '{name}': set {}", keys.join(", ")), data))
         }
+        Command::ScanMats => {
+            let mats: Vec<Value> = crate::scan::mats()
+                .iter()
+                .map(|m| json!({ "key": m.key, "name": m.name, "url": format!("/mats/{}", m.file), "colour": m.printed_rgb }))
+                .collect();
+            Ok(ok(&game, "Print a mat at 100% (Letter, landscape) and check its 200 mm ruler: Teal for most pieces, Magenta for green, teal or blue ones, White only to check the print size", json!({ "mats": mats })))
+        }
+        Command::AddScan { component, data, mat, view, taps, height, print_scale } => {
+            let s = spec::load(&app.games, &game)?;
+            let c = s.component(&component).ok_or_else(|| no_component(&s, &component))?;
+            let mat = mat.unwrap_or_else(|| "teal".into());
+            crate::scan::mat(&mat)?;
+            let view = view.unwrap_or_else(|| "flat".into());
+            check_view(&view)?;
+            check_scale(print_scale)?;
+            let bytes = crate::media::decode_upload(&data)?;
+            let focal_35 = crate::scan::focal_35(&bytes);
+            let photo = crate::media::save_photo_bytes(&app.games, &game, &format!("{component}-scan"), &bytes)?;
+            let height = height.or_else(|| if view == "flat" { c.measure.as_ref().and_then(|m| m.piece).map(|p| p[2]) } else { None });
+            // The scale the game's last scan was printed at, unless told.
+            let print_scale = print_scale
+                .or_else(|| s.components.iter().flat_map(|c| &c.scans).max_by_key(|x| x.created_ms).map(|x| x.print_scale))
+                .unwrap_or(1.0);
+            let now = crate::now_ms();
+            let id = format!("s{now}");
+            let scan = spec::Scan {
+                id: id.clone(), photo, mat, view, focal_35, taps, height, print_scale, result: None, problem: None, checks: vec![], used_ms: None,
+                request: None, log: vec![], created_ms: now,
+            };
+            let c2 = component.clone();
+            app.mutate(&game, move |s| {
+                let c = s.components.iter_mut().find(|c| c.id == c2).ok_or_else(|| Reason::new("no_component", format!("no component '{c2}'")))?;
+                c.scans.push(scan);
+                Ok(format!("added scan {} to '{c2}'", c.scans.last().unwrap().id))
+            })
+            .await?;
+            let msg = remeasure(app, &game, &component, &id).await?;
+            Ok(ok(&game, msg, scan_json(app, &game, &component, &id)?))
+        }
+        Command::SetScan { component, scan, mat, view, taps, height, print_scale, notes } => {
+            if let Some(m) = &mat {
+                crate::scan::mat(m)?;
+            }
+            if let Some(v) = &view {
+                check_view(v)?;
+            }
+            check_scale(print_scale)?;
+            let again = mat.is_some() || view.is_some() || taps.is_some() || height.is_some() || print_scale.is_some();
+            let (c2, s2) = (component.clone(), scan.clone());
+            let msg = app
+                .mutate(&game, move |s| {
+                    let sc = scan_mut(s, &c2, &s2)?;
+                    if let Some(v) = mat { sc.mat = v; }
+                    if let Some(v) = view { sc.view = v; }
+                    if let Some(v) = taps { sc.taps = Some(v); }
+                    if let Some(v) = height { sc.height = Some(v).filter(|v| *v > 0.0); }
+                    if let Some(v) = print_scale { sc.print_scale = v; }
+                    if let Some(v) = &notes {
+                        spec::set_notes(&mut sc.request, &mut sc.log, v);
+                    }
+                    Ok(if notes.is_some() { format!("scan {s2}: noted for the agent") } else { format!("scan {s2} changed") })
+                })
+                .await?;
+            let msg = if again { remeasure(app, &game, &component, &scan).await? } else { msg };
+            Ok(ok(&game, msg, scan_json(app, &game, &component, &scan)?))
+        }
+        Command::UseScan { component, scan } => {
+            let (c2, s2) = (component.clone(), scan.clone());
+            let face = std::sync::Arc::new(std::sync::Mutex::new(false));
+            let f2 = face.clone();
+            let msg = app
+                .mutate(&game, move |s| {
+                    let i = s.components.iter().position(|c| c.id == c2).ok_or_else(|| no_component(s, &c2))?;
+                    let c = &mut s.components[i];
+                    let sc = c.scans.iter_mut().find(|x| x.id == s2).ok_or_else(|| no_scan(&c2, &s2))?;
+                    let r = sc.result.clone().ok_or_else(|| Reason::new("not_measured", format!("scan {s2} isn't measured yet: tap the four corner markers")).subject(&s2))?;
+                    sc.used_ms = Some(crate::now_ms());
+                    let (view, photo, height) = (sc.view.clone(), sc.photo.clone(), sc.height);
+                    let fmt = |v: f64| format!("{v:.2}").trim_end_matches('0').trim_end_matches('.').to_string();
+                    let msg = if view == "flat" {
+                        let m = c.measure.get_or_insert_with(Default::default);
+                        let h = m.piece.map(|p| p[2]).or(height).ok_or_else(|| {
+                            Reason::new("needs_height", "the scan gives the footprint: give its height (calipers) first, as the scan's height or the piece's").subject(&s2)
+                        })?;
+                        // In the orientation it was measured in before.
+                        let [a, b] = r.size;
+                        let (w, d) = match m.piece {
+                            Some(p) if p[0] < p[1] => (b, a),
+                            _ => (a, b),
+                        };
+                        m.piece = Some([w, d, h]);
+                        if m.stack.is_none() {
+                            m.of = spec::MeasureOf::Piece;
+                        }
+                        if crate::media::faces_for(c).contains(&"top") {
+                            c.faces.insert("top".into(), spec::Face { photo, corners: r.top_face });
+                            *f2.lock().unwrap() = true;
+                        }
+                        format!("'{c2}': one piece is {} × {} × {} mm, from scan {s2}", fmt(w), fmt(d), fmt(h))
+                    } else {
+                        let m = c.measure.as_mut().and_then(|m| m.piece.as_mut()).ok_or_else(|| {
+                            Reason::new("needs_footprint", "an end or side scan gives the thickness: measure the footprint first (a flat scan)").subject(&s2)
+                        })?;
+                        m[2] = r.size[1];
+                        format!("'{c2}': one piece is {} mm thick, from the {view} scan {s2}", fmt(r.size[1]))
+                    };
+                    // Stored as something already: its packer fields follow the new sizes.
+                    let kind = c.kind_name().to_string();
+                    let msg = if matches!(kind.as_str(), "cards" | "tokens" | "mini" | "bin") {
+                        match crate::storage::derive(c, &kind, &Map::new()) {
+                            Ok((k, _)) => {
+                                c.kind = k;
+                                format!("{msg}; stored as {kind} again")
+                            }
+                            Err(e) => format!("{msg}; not stored as {kind} again: {}", e.message),
+                        }
+                    } else {
+                        msg
+                    };
+                    Ok(msg)
+                })
+                .await?;
+            if *face.lock().unwrap() {
+                let s = spec::load(&app.games, &game)?;
+                let c = s.component(&component).unwrap();
+                if let Err(e) = crate::media::render_face(&app.games, &game, c, "top", &c.faces["top"]) {
+                    eprintln!("{game}: top face from scan {scan}: {}", e.message);
+                }
+                app.changed(&game).await?;
+            }
+            Ok(ok(&game, msg, scan_json(app, &game, &component, &scan)?))
+        }
+        Command::CheckScan { component, scan, dim, calipers } => {
+            if !(calipers.is_finite() && calipers > 0.0) {
+                return Err(Reason::new("not_positive", "calipers is the reading in mm"));
+            }
+            let s2 = scan.clone();
+            let msg = app
+                .mutate(&game, move |s| {
+                    let sc = scan_mut(s, &component, &s2)?;
+                    let r = sc.result.as_ref().ok_or_else(|| Reason::new("not_measured", format!("scan {s2} isn't measured yet")).subject(&s2))?;
+                    let v = match dim.as_str() {
+                        "long" => r.size[0],
+                        "short" => r.size[1],
+                        _ => return Err(Reason::new("bad_dim", "dim is long or short (the scan's two sides)").subject(&dim)),
+                    };
+                    sc.checks.retain(|c| c.dim != dim);
+                    sc.checks.push(spec::ScanCheck { dim: dim.clone(), calipers, scan: v, at_ms: crate::now_ms() });
+                    Ok(format!("scan {s2}: {dim} side {v} mm, calipers {calipers} mm ({:+.2} mm)", v - calipers))
+                })
+                .await?;
+            Ok(ok(&game, msg, json!({})))
+        }
+        Command::RemoveScan { component, scan } => {
+            let (c2, s2) = (component.clone(), scan.clone());
+            let photo = std::sync::Arc::new(std::sync::Mutex::new(None));
+            let p2 = photo.clone();
+            let msg = app
+                .mutate(&game, move |s| {
+                    let c = s.components.iter_mut().find(|c| c.id == c2).ok_or_else(|| Reason::new("no_component", format!("no component '{c2}'")))?;
+                    let i = c.scans.iter().position(|x| x.id == s2).ok_or_else(|| no_scan(&c2, &s2))?;
+                    let sc = c.scans.remove(i);
+                    // A face cropped from its photo goes with it, as with remove_photo.
+                    let dropped: Vec<String> = c.faces.iter().filter(|(_, f)| f.photo == sc.photo).map(|(k, _)| k.clone()).collect();
+                    c.faces.retain(|_, f| f.photo != sc.photo);
+                    *p2.lock().unwrap() = Some(sc.photo);
+                    Ok(format!("removed scan {s2} from '{c2}'{}", if dropped.is_empty() { String::new() } else { format!(" and its {} face", dropped.join(", ")) }))
+                })
+                .await?;
+            if let Some(p) = photo.lock().unwrap().take() {
+                let _ = std::fs::remove_file(crate::media::photo_path(&app.games, &game, &p));
+            }
+            let _ = std::fs::remove_file(crate::scan::overlay_path(&app.games, &game, &scan));
+            Ok(ok(&game, msg, json!({})))
+        }
         Command::AddPhoto { component, data, note } => {
             let s = spec::load(&app.games, &game)?;
             if s.component(&component).is_none() {
@@ -769,16 +1003,9 @@ pub async fn run(app: &std::sync::Arc<App>, req: Request) -> Result<Value, Reaso
         Command::UpdateRequest { id, status, reply } => {
             let msg = app
                 .mutate(&game, move |s| {
-                    let r = s
-                        .components
-                        .iter_mut()
-                        .filter_map(|c| match &mut c.kind {
-                            Kind::Box(b) => Some(&mut b.layout.tweaks),
-                            _ => None,
-                        })
-                        .flatten()
-                        .filter_map(|t| t.request.as_mut())
-                        .chain(s.pieces.iter_mut().filter_map(|p| p.request.as_mut()))
+                    let r = request_slots(s)
+                        .into_iter()
+                        .filter_map(|(r, _)| r.as_mut())
                         .find(|r| r.id == id)
                         .ok_or_else(|| Reason::new("no_request", format!("no request '{id}' in this game (requests lists them)")).subject(&id))?;
                     r.status = status;
@@ -794,21 +1021,11 @@ pub async fn run(app: &std::sync::Arc<App>, req: Request) -> Result<Value, Reaso
         Command::MarkRead { id } => {
             let msg = app
                 .mutate(&game, move |s| {
-                    let mut slots: Vec<(&mut Option<UserRequest>, &mut Vec<UserRequest>)> = s
-                        .components
-                        .iter_mut()
-                        .filter_map(|c| match &mut c.kind {
-                            Kind::Box(b) => Some(&mut b.layout.tweaks),
-                            _ => None,
-                        })
-                        .flatten()
-                        .map(|t| (&mut t.request, &mut t.log))
-                        .chain(s.pieces.iter_mut().map(|p| (&mut p.request, &mut p.log)))
-                        .collect();
+                    let mut slots = request_slots(s);
                     let (req, log) = slots
                         .iter_mut()
                         .find(|(r, _)| r.as_ref().is_some_and(|r| r.id == id))
-                        .ok_or_else(|| Reason::new("no_request", format!("no request '{id}' on a tray in this game")).subject(&id))?;
+                        .ok_or_else(|| Reason::new("no_request", format!("no request '{id}' on a tray, piece or scan in this game")).subject(&id))?;
                     if req.as_ref().is_some_and(|r| r.status.pending()) {
                         return Err(Reason::new("not_answered", "Claude hasn't answered it yet: it's still open or being worked on").subject(&id));
                     }
@@ -1794,6 +2011,122 @@ pub fn slugify(name: &str) -> String {
 
 fn kind_name(c: &Component) -> &'static str {
     c.kind_name()
+}
+
+/// Every place a request can be: trays (and a box's insert as a whole), imported pieces, scans.
+fn request_slots(s: &mut Spec) -> Vec<(&mut Option<UserRequest>, &mut Vec<UserRequest>)> {
+    let mut out: Vec<(&mut Option<UserRequest>, &mut Vec<UserRequest>)> = vec![];
+    for c in s.components.iter_mut() {
+        let Component { kind, scans, .. } = c;
+        if let Kind::Box(b) = kind {
+            out.extend(b.layout.tweaks.iter_mut().map(|t| (&mut t.request, &mut t.log)));
+        }
+        out.extend(scans.iter_mut().map(|x| (&mut x.request, &mut x.log)));
+    }
+    out.extend(s.pieces.iter_mut().map(|p| (&mut p.request, &mut p.log)));
+    out
+}
+
+fn check_view(v: &str) -> Result<(), Reason> {
+    match v {
+        "flat" | "end" | "side" => Ok(()),
+        _ => Err(Reason::new("bad_view", "view is flat (lying down: its footprint), end or side (stood up: its thickness)").subject(v)),
+    }
+}
+
+fn check_scale(v: Option<f64>) -> Result<(), Reason> {
+    match v {
+        Some(v) if !(0.8..=1.2).contains(&v) => Err(Reason::new("bad_scale", format!("print_scale is the mat's 200 mm ruler as printed ÷ 200, near 1; got {v}"))),
+        _ => Ok(()),
+    }
+}
+
+fn no_scan(component: &str, scan: &str) -> Reason {
+    Reason::new("no_scan", format!("'{component}' has no scan '{scan}'")).subject(scan)
+}
+
+fn scan_mut<'a>(s: &'a mut Spec, component: &str, scan: &str) -> Result<&'a mut spec::Scan, Reason> {
+    let c = s.components.iter_mut().find(|c| c.id == component).ok_or_else(|| Reason::new("no_component", format!("no component '{component}'")).subject(component))?;
+    c.scans.iter_mut().find(|x| x.id == scan).ok_or_else(|| no_scan(component, scan))
+}
+
+/// A scan as the app and agents see it: the spec's, with its photo's and overlay's URLs and the
+/// overlay's file on the server.
+pub fn scan_json(app: &App, game: &str, component: &str, scan: &str) -> Result<Value, Reason> {
+    let s = spec::load(&app.games, game)?;
+    let c = s.component(component).ok_or_else(|| no_component(&s, component))?;
+    let sc = c.scans.iter().find(|x| x.id == scan).ok_or_else(|| no_scan(component, scan))?;
+    Ok(scan_value(app, game, sc))
+}
+
+pub fn scan_value(app: &App, game: &str, sc: &spec::Scan) -> Value {
+    let mut v = json!(sc);
+    v["photo_url"] = json!(format!("/api/games/{game}/media/photos/{}", sc.photo));
+    if let Some(r) = &sc.result {
+        v["overlay_url"] = json!(format!("/api/games/{game}/media/scans/{}.jpg?v={}", sc.id, r.measured_ms));
+        v["overlay_file"] = json!(crate::scan::overlay_path(&app.games, game, &sc.id));
+    }
+    v
+}
+
+/// Measure a scan (again) from its taps, and keep what it says, or why it couldn't. A fresh
+/// measurement asks the agent to review it, unless a request on it is still open.
+async fn remeasure(app: &std::sync::Arc<App>, game: &str, component: &str, id: &str) -> Result<String, Reason> {
+    let s = spec::load(&app.games, game)?;
+    let c = s.component(component).ok_or_else(|| no_component(&s, component))?;
+    let sc = c.scans.iter().find(|x| x.id == id).ok_or_else(|| no_scan(component, id))?.clone();
+    let name = c.name.clone();
+    let Some(taps) = sc.taps else {
+        return Ok(format!("scan {id} saved: tap the four corner markers on it to measure it"));
+    };
+    let (games, g, sid) = (app.games.clone(), game.to_string(), id.to_string());
+    let sc2 = sc.clone();
+    let res = tokio::task::spawn_blocking(move || {
+        let mat = crate::scan::mat(&sc2.mat)?;
+        let photo = crate::media::photo_path(&games, &g, &sc2.photo);
+        let overlay = crate::scan::overlay_path(&games, &g, &sid);
+        crate::scan::measure(&crate::scan::ScanInput { photo: &photo, mat: &mat, taps, focal_35: sc2.focal_35, height: sc2.height, print_scale: sc2.print_scale, overlay: &overlay })
+    })
+    .await
+    .map_err(|e| Reason::new("scan_failed", e.to_string()))?;
+    let (c2, id2) = (component.to_string(), id.to_string());
+    app.mutate(game, move |s| {
+        let sc = scan_mut(s, &c2, &id2)?;
+        let fmt = |v: f64| format!("{v:.2}").trim_end_matches('0').trim_end_matches('.').to_string();
+        match res {
+            Ok(m) => {
+                let size = format!("{} × {} mm", fmt(m.size[0]), fmt(m.size[1]));
+                let msg = format!(
+                    "scan {id2}: {size} ({} view), {:.0}% of its box filled, camera {} mm up{}",
+                    sc.view,
+                    m.fill * 100.0,
+                    m.camera_height,
+                    if m.notes.is_empty() { String::new() } else { format!("; {}", m.notes.join("; ")) }
+                );
+                sc.result = Some(spec::ScanResult {
+                    size: m.size, raw: m.raw, fill: m.fill, camera_height: m.camera_height, focal_35: m.focal_35, focal_assumed: m.focal_assumed,
+                    corners: m.corners, outline: m.outline, top_face: m.top_face, notes: m.notes, measured_ms: crate::now_ms(),
+                });
+                sc.problem = None;
+                if !sc.request.as_ref().is_some_and(|r| r.status.pending()) {
+                    let text = format!(
+                        "Review this scan of {name} ({} view, {} mat): is the yellow cut-out the piece and only the piece, and does the magenta box fit its footprint? It reads {size}{}.",
+                        sc.view,
+                        sc.mat,
+                        sc.height.map_or(" (not corrected for its height: none given)".into(), |h| format!(", corrected for standing {} mm tall", fmt(h)))
+                    );
+                    spec::set_notes(&mut sc.request, &mut sc.log, &text);
+                }
+                Ok(msg)
+            }
+            Err(e) => {
+                sc.result = None;
+                sc.problem = Some(e.message.clone());
+                Ok(format!("scan {id2}: couldn't measure it: {}", e.message))
+            }
+        }
+    })
+    .await
 }
 
 fn no_component(s: &Spec, id: &str) -> Reason {

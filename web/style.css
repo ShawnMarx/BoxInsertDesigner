@@ -374,3 +374,12 @@ a.button { display: inline-flex; align-items: center; min-height: 44px; padding:
 a.button.primary { background: var(--accent); color: #fff; border-color: transparent; }
 #export-out .row { flex-wrap: wrap; gap: 8px; margin: 6px 0; }
 .kept-edit { border-left: 3px solid var(--accent); padding: 4px 0 4px 10px; margin: 8px 0; }
+
+/* Scans: measuring a piece from a photo on the scan mat. */
+.scan-tools { display: grid; gap: 8px; }
+.scan-list { display: grid; gap: 12px; margin-top: 8px; }
+.scan-card { border: 1px solid var(--line, rgb(127 127 127 / 0.3)); border-radius: 10px; padding: 10px; display: grid; gap: 8px; }
+.scan-card img.overlay { width: 100%; border-radius: 6px; display: block; cursor: zoom-in; }
+.scan-size { font-size: 1.25em; font-weight: 600; }
+.scan-checks { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.scan-reply { border-left: 3px solid var(--accent); padding-left: 8px; }

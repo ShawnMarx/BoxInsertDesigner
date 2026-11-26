@@ -1784,6 +1784,7 @@ mod tests {
             clearance: None,
             photos: vec![],
             faces: Default::default(),
+        scans: vec![],
             measure: None,
             notes: None,
             label: None,

@@ -2054,7 +2054,7 @@ plates = initPlates({
   openPiece: (piece, name) => openPiece(game, piece, name),
 });
 initComponents({
-  command, toast, openSheet, showTab,
+  command, toast, openSheet, showTab, requestNote,
   state: () => state, game: () => game, refresh,
   view: (id, mode) => setFocus({ id, mode }),
 });

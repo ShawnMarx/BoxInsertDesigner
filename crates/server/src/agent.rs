@@ -403,7 +403,20 @@ fn emit(app: &App) {
 async fn converse(app: &Arc<App>, s: &Settings, row: &Value, game: &str, run: &mut Run) -> Result<String, CallError> {
     let tools = tools();
     let system = system_prompt();
-    let mut messages = vec![json!({ "role": "user", "content": format!("A change request to work on:\n{}", serde_json::to_string_pretty(row).unwrap()) })];
+    let text = format!("A change request to work on:\n{}", serde_json::to_string_pretty(row).unwrap());
+    // A scan's review comes with its overlay, to look at.
+    let overlay = row["scan"]["overlay_file"].as_str().and_then(|p| std::fs::read(p).ok());
+    let content = match overlay {
+        Some(bytes) => {
+            use base64::Engine;
+            json!([
+                { "type": "image", "source": { "type": "base64", "media_type": "image/jpeg", "data": base64::engine::general_purpose::STANDARD.encode(bytes) } },
+                { "type": "text", "text": text },
+            ])
+        }
+        None => json!(text),
+    };
+    let mut messages = vec![json!({ "role": "user", "content": content })];
     let mut last_text = String::new();
     for _ in 0..MAX_TURNS {
         let mut body = json!({

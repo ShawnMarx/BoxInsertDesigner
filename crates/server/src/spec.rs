@@ -366,6 +366,9 @@ pub struct Component {
     /// the component's placeholder in the viewer.
     #[serde(default, skip_serializing_if = "std::collections::BTreeMap::is_empty")]
     pub faces: std::collections::BTreeMap<String, Face>,
+    /// Photos of it on a scan mat, each measured (`add_scan`), newest last.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub scans: Vec<Scan>,
     /// What was measured, as measured. `store_as` derives the packer's fields (`kind`) from it.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub measure: Option<Measure>,
@@ -533,6 +536,92 @@ pub struct BoxKind {
 
 fn is_unset(v: &[f64; 3]) -> bool {
     v.iter().all(|x| *x == 0.0)
+}
+
+/// A photo of a component on a printed scan mat (`web/mats/`), and what it measured
+/// (`scan.rs`). Its photo is in `photos/` like the others, but isn't one of `photos`.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct Scan {
+    pub id: String,
+    pub photo: String,
+    /// The mat's key in `web/mats/mats.json`: teal, magenta, white.
+    pub mat: String,
+    /// How the piece lies: flat (its footprint), end or side (stood up: its thickness).
+    #[serde(default = "flat")]
+    pub view: String,
+    /// The photo's 35 mm-equivalent focal length, from its EXIF before it was stripped.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub focal_35: Option<f64>,
+    /// The corner markers' centres on the photo, 0–1, as tapped (any order round the mat).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub taps: Option<[[f64; 2]; 4]>,
+    /// How tall the piece stands in the shot, mm, to correct for its top being nearer the camera.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub height: Option<f64>,
+    /// The mat as printed ÷ as drawn: its 200 mm ruler measured ÷ 200.
+    #[serde(default = "unit_scale", skip_serializing_if = "is_unit_scale")]
+    pub print_scale: f64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub result: Option<ScanResult>,
+    /// Why it couldn't be measured, when it couldn't.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub problem: Option<String>,
+    /// The user's caliper readings against it.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub checks: Vec<ScanCheck>,
+    /// When its sizes were put into the component's measure.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub used_ms: Option<u64>,
+    /// The agent's review of the scan, as on a tray.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub request: Option<Request>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub log: Vec<Request>,
+    pub created_ms: u64,
+}
+
+fn flat() -> String {
+    "flat".into()
+}
+
+fn unit_scale() -> f64 {
+    1.0
+}
+
+fn is_unit_scale(v: &f64) -> bool {
+    *v == 1.0
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct ScanResult {
+    /// Long × short side of what lies on the mat, mm, corrected for its height.
+    pub size: [f64; 2],
+    /// The outline's box as it lies on the mat, uncorrected, mm.
+    pub raw: [f64; 2],
+    /// The cut-out's area ÷ its box's: near 1 for a rectangle.
+    pub fill: f64,
+    pub camera_height: f64,
+    pub focal_35: f64,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub focal_assumed: bool,
+    /// The corner markers as found, 0–1, top-left, top-right, bottom-right, bottom-left.
+    pub corners: [[f64; 2]; 4],
+    /// The cut-out's hull, mm, about the footprint's centre, long side along x.
+    pub outline: Vec<[f64; 2]>,
+    /// The top face on the photo, 0–1 (TL TR BR BL), for the component's top face.
+    pub top_face: [[f64; 2]; 4],
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub notes: Vec<String>,
+    pub measured_ms: u64,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct ScanCheck {
+    /// long, short (the scan's two sides).
+    pub dim: String,
+    pub calipers: f64,
+    pub scan: f64,
+    pub at_ms: u64,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -932,7 +1021,7 @@ impl Spec {
                 }
             }
             for (face, f) in &c.faces {
-                if !c.photos.iter().any(|p| p.file == f.photo) {
+                if !c.photos.iter().any(|p| p.file == f.photo) && !c.scans.iter().any(|x| x.photo == f.photo) {
                     return Err(bad("no_photo", &c.id, format!("face '{face}' uses photo '{}', which this component doesn't have", f.photo)));
                 }
                 if f.corners.iter().flatten().any(|v| !(0.0..=1.0).contains(v)) {
@@ -1119,6 +1208,7 @@ impl Component {
             clearance: None,
             photos: vec![],
             faces: Default::default(),
+            scans: vec![],
             measure: None,
             notes: None,
             label: None,

@@ -24,6 +24,12 @@ you poll it through the `box-insert-designer` MCP server (`bid mcp`) or the `bid
    the generated tray. The edit is never taken as the tray: work out what he meant (a hole, a
    thinner wall, a deeper pocket) and get it with the typed commands, or say in the reply what
    the packer can't do yet.
+   A request with a `scan` (and `tray` null) is about a component's photo on the scan mat: the
+   app asks for a review of each fresh measurement. Look at `scan.overlay_file` (the picture:
+   yellow is what stood out from the mat, cyan its box, magenta the footprint fitted, with the
+   sizes) and say whether the cut-out is the piece and only the piece. If it isn't (its shadow, a
+   second piece, a dark side keyed out), say so, and measure again with `set_scan` when a change
+   helps (`height`, `taps`, `mat`). Use `use_scan` only when the user asks for the sizes to be used.
 5. Back to 1. Leave the request on the tray: the user clears it with "Mark read" once they've read the
    reply, and it moves to the tray's history.
 

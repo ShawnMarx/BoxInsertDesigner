@@ -15,6 +15,7 @@ mod media;
 mod pieces;
 mod plates;
 mod sample;
+mod scan;
 mod spec;
 mod storage;
 mod style;
@@ -617,10 +618,11 @@ async fn print_glb(State(app): State<Arc<App>>, UrlPath(slug): UrlPath<String>) 
     }
 }
 
-/// Photos and face textures: `/api/games/<slug>/media/photos/<file>` or `.../faces/<file>`.
+/// Photos and face textures: `/api/games/<slug>/media/photos/<file>` or `.../faces/<file>`, and
+/// scan overlays (`.../scans/<scan>.jpg`).
 async fn media_file(State(app): State<Arc<App>>, UrlPath((slug, kind, file)): UrlPath<(String, String, String)>) -> Response {
     let safe = |s: &str| !s.is_empty() && !s.starts_with('.') && s.chars().all(|c| c.is_ascii_alphanumeric() || "-_.".contains(c));
-    if !spec::is_slug(&slug) || !matches!(kind.as_str(), "photos" | "faces" | "edits") || !safe(&file) {
+    if !spec::is_slug(&slug) || !matches!(kind.as_str(), "photos" | "faces" | "edits" | "scans") || !safe(&file) {
         return (StatusCode::NOT_FOUND, "no such file").into_response();
     }
     // An edit's pictures keep their names as they change, so they aren't cached.
@@ -629,7 +631,11 @@ async fn media_file(State(app): State<Arc<App>>, UrlPath((slug, kind, file)): Ur
         "edits" => return (StatusCode::NOT_FOUND, "no such file").into_response(),
         _ => ("image/jpeg", "max-age=86400"),
     };
-    let dir = if kind == "edits" { edit::pictures_dir(&app.games, &slug) } else { app.games.join(&slug).join(&kind) };
+    let dir = match kind.as_str() {
+        "edits" => edit::pictures_dir(&app.games, &slug),
+        "scans" => app.games.join(&slug).join(".build").join("scans"),
+        _ => app.games.join(&slug).join(&kind),
+    };
     match std::fs::read(dir.join(&file)) {
         Ok(bytes) => ([(header::CONTENT_TYPE, ctype), (header::CACHE_CONTROL, cache)], bytes).into_response(),
         Err(_) => (StatusCode::NOT_FOUND, "no such file").into_response(),

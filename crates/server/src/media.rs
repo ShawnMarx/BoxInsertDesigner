@@ -39,22 +39,29 @@ pub fn faces_for(c: &Component) -> &'static [&'static str] {
     }
 }
 
+/// An upload's bytes, from a data URL or bare base64.
+pub fn decode_upload(data: &str) -> Result<Vec<u8>, Reason> {
+    let b64 = data.split_once(";base64,").map_or(data, |(_, b)| b).trim();
+    base64::engine::general_purpose::STANDARD.decode(b64).map_err(|e| Reason::new("bad_photo", format!("not base64: {e}")))
+}
+
 /// Decode an uploaded photo (a data URL or bare base64; JPEG or PNG), shrink it to PHOTO_MAX,
 /// and store it as JPEG. Returns the file name.
 pub fn save_photo(games: &Path, slug: &str, component: &str, data: &str) -> Result<String, Reason> {
-    let b64 = data.split_once(";base64,").map_or(data, |(_, b)| b).trim();
-    let bytes = base64::engine::general_purpose::STANDARD
-        .decode(b64)
-        .map_err(|e| Reason::new("bad_photo", format!("not base64: {e}")))?;
+    save_photo_bytes(games, slug, component, &decode_upload(data)?)
+}
+
+/// `save_photo` from the file's bytes; the name is `<prefix>-<now>.jpg`.
+pub fn save_photo_bytes(games: &Path, slug: &str, prefix: &str, bytes: &[u8]) -> Result<String, Reason> {
     // Decoded and written afresh, so nothing of the original file's metadata (camera, place,
     // time) is kept; its EXIF orientation is applied first, so a phone photo stays upright.
     let bad = |e: image::ImageError| Reason::new("bad_photo", format!("not a JPEG or PNG: {e}"));
-    let mut dec = image::ImageReader::new(std::io::Cursor::new(&bytes)).with_guessed_format().map_err(io)?.into_decoder().map_err(bad)?;
+    let mut dec = image::ImageReader::new(std::io::Cursor::new(bytes)).with_guessed_format().map_err(io)?.into_decoder().map_err(bad)?;
     let orientation = image::ImageDecoder::orientation(&mut dec).unwrap_or(image::metadata::Orientation::NoTransforms);
     let mut img = image::DynamicImage::from_decoder(dec).map_err(bad)?;
     img.apply_orientation(orientation);
     let img = if img.width().max(img.height()) > PHOTO_MAX { img.resize(PHOTO_MAX, PHOTO_MAX, image::imageops::FilterType::Triangle) } else { img };
-    let file = format!("{component}-{}.jpg", crate::now_ms());
+    let file = format!("{prefix}-{}.jpg", crate::now_ms());
     let path = photo_path(games, slug, &file);
     std::fs::create_dir_all(path.parent().unwrap()).map_err(io)?;
     img.to_rgb8().save_with_format(&path, ImageFormat::Jpeg).map_err(io)?;
@@ -120,7 +127,7 @@ fn square_to_quad(q: [[f64; 2]; 4]) -> impl Fn(f64, f64) -> (f64, f64) {
     }
 }
 
-fn sample(img: &RgbImage, x: f64, y: f64) -> [u8; 3] {
+pub(crate) fn sample(img: &RgbImage, x: f64, y: f64) -> [u8; 3] {
     let (w, h) = (img.width() as f64, img.height() as f64);
     let x = x.clamp(0.0, w - 1.001);
     let y = y.clamp(0.0, h - 1.001);

@@ -75,6 +75,12 @@ the service only when this tree is clean and on main. `docs/UPKEEP.md` is the re
   cut ones are just cut.
 - `crates/server/src/media.rs` — component photos (`games/<slug>/photos/`, in git) and face
   textures straightened from them (`games/<slug>/faces/`, generated and ignored).
+- `crates/server/src/scan.rs` — measuring a component from a photo on the printed scan mat
+  (`web/mats/`, PLAN M12): the four tapped corner markers → homography (least squares with the
+  middle markers) → field keyed out → a box fitted to the cut-out, corrected for the piece's
+  height with the camera's height (EXIF focal length) → an overlay picture per scan. Commands
+  `add_scan`, `set_scan`, `use_scan`, `check_scan`, `remove_scan`; each fresh measurement opens a
+  review request on the scan (`component.scans[].request`).
 - `crates/server/src/plates.rs` — print plates: every piece in print orientation, packed onto
   the printer's beds around the user's pins (`spec.plates`, `set_plate`), with the transforms the
   viewer and the 3MF use. `bambu.rs` writes them as a Bambu Studio project 3MF (structure copied

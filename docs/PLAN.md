@@ -488,7 +488,20 @@ Fits BID because a face texture is already a quad straightened to known proporti
   and its top is 19 mm up. Lessons: a piece's own shadow is dark and must count as field (key
   on hue, let very dark pixels go to the field); scaling the whole outline down to the top
   face overstates by the sides seen, so fit a solid; height stays a caliper (or side-view) job
-- [ ] Phase 1: `bid scan_mat` / a Components-tab link prints the mat PDF (Letter; A4 later),
+- [x] Phase 1 built (2026-11-26, `scan.rs`, the Components tab's "Measure from a photo"): mat
+      links, upload of the original bytes (EXIF focal length read, then stripped), four corner
+      taps pulled onto the markers, a least-squares homography with the middle markers, the field
+      keyed on hue (its own shadow counts as field), and a box fitted by overlap (IoU, Nelder–Mead)
+      to the cut-out as seen in perspective: footprint plus raised top, from the camera's height.
+      The outline's extremes alone read 0.3–0.4 mm large on blurred edges; the overlap fit brought
+      the book token to 19.03 × 15.77 at 1× (calipers 19.0 × 15.7) and 19.34 × 15.68 at 2×. Each
+      scan has an overlay with its sizes, caliper spot checks (`check_scan`), "Use these sizes"
+      (`use_scan`: footprint, or thickness from an end/side shot, plus the top face) and a review
+      request the agent answers on the scan card (the app's own agent gets the overlay as an
+      image). Still open: the per-printer scale is typed per scan (the 200 mm ruler); a black die in
+      dappled shadow on Magenta read 17.1–17.5 against 18.1, its shadowed sides keyed as field;
+      several pieces on the field measure the largest only
+- [ ] Phase 1 as planned: `bid scan_mat` / a Components-tab link prints the mat PDF (Letter; A4 later),
       with a scale bar to confirm 100% printing. Upload a top photo as a `scan` (the four mat
       corners tapped, reusing the face-marking UI) → homography → teal keyed out → outline as a
       polygon in mm → `measure.piece` width/depth filled in, outline stored, crop kept as the
