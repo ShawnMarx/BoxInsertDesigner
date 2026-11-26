@@ -29,7 +29,8 @@ ARUCO_4X4 = {
 VERSION = 1
 PAGE_W, PAGE_H = 279.4, 215.9          # US Letter, landscape
 MARKER = 20.0                          # marker side, black border included
-INSET = 20.0                           # marker centre from the page edges
+INSET = 16.5                           # marker centre from the page edges
+RULER = 9.0                            # depth of the ruler strip on each side of the field
 FIELD = 36.0                           # field inset from the page edges
 
 # Two colours far apart, so a piece close to one keys out cleanly on the other.
@@ -88,32 +89,44 @@ def draw_mat(mat):
     p.fill(mat["rgb"])
     p.rect(fx, fy, fw, fh)
 
-    # mm ticks outward from the field's edges: 1 mm, longer every 5, longest every 10.
-    p.fill((0.15, 0.15, 0.15))
-    t = 0.18
+    # A ruler on each side of the field: a light strip with mm ticks from the field's edge
+    # (1 mm, longer every 5, longest every 10) and figures every 10 mm, counted from the
+    # field's top-left corner, so 0 is the field's corner on every side.
+    g, k = (0.92, 0.92, 0.90), 0.25
+    side = RULER + 1.5  # the side rulers are deeper: their figures run across them
+    for x, y, w, h in [(fx, fy - RULER, fw, RULER), (fx, fy + fh, fw, RULER),
+                       (fx - side, fy, side, fh), (fx + fw, fy, side, fh)]:
+        p.fill(g)
+        p.rect(x, y, w, h)
+        p.fill((0.1, 0.1, 0.1))
+        p.rect(x, y, w, k); p.rect(x, y + h - k, w, k); p.rect(x, y, k, h); p.rect(x + w - k, y, k, h)
+
+    def tick(i):
+        return (5.0, 0.3) if i % 10 == 0 else (3.2, 0.25) if i % 5 == 0 else (2.0, 0.2)
+
+    p.fill((0.05, 0.05, 0.05))
     for i in range(int(fw) + 1):
-        L = 4.0 if i % 10 == 0 else 2.5 if i % 5 == 0 else 1.4
+        L, t = tick(i)
         p.rect(fx + i - t / 2, fy - L, t, L)
         p.rect(fx + i - t / 2, fy + fh, t, L)
     for i in range(int(fh) + 1):
-        L = 4.0 if i % 10 == 0 else 2.5 if i % 5 == 0 else 1.4
+        L, t = tick(i)
         p.rect(fx - L, fy + i - t / 2, L, t)
         p.rect(fx + fw, fy + i - t / 2, L, t)
 
-    # mm figures every 10, counted from the field's top-left corner; skipped where the middle
-    # markers sit. Helvetica digits are 0.556 em wide, so the figures can be centred.
-    fs = 4.6
+    # Helvetica digits are 0.556 em wide, so the figures can be centred on their ticks.
+    fs = 5.2
     digit = 0.556 * fs / PT
     for i in range(0, int(fw) + 1, 10):
-        s, x = str(i), fx + i
-        if abs(x - PAGE_W / 2) < 13:
-            continue
-        p.text(x - len(s) * digit / 2, fy - 4.6, fs, s)
-        p.text(x - len(s) * digit / 2, fy + fh + 5.8, fs, s)
+        s, x = str(i), fx + i - len(str(i)) * digit / 2
+        if i == 0:
+            x = fx + 0.7  # inside the strip, beside the corner
+        p.text(x, fy - 5.8, fs, s)
+        p.text(x, fy + fh + 7.2, fs, s)
     for j in range(0, int(fh) + 1, 10):
-        s, y = str(j), fy + j + 0.6
-        p.text(fx - 4.8 - len(s) * digit, y, fs, s)
-        p.text(fx + fw + 4.8, y, fs, s)
+        s, y = str(j), fy + j + (2.4 if j == 0 else 0.65)
+        p.text(fx - 5.7 - len(s) * digit, y, fs, s)
+        p.text(fx + fw + 5.7, y, fs, s)
 
     for (cx, cy), mid in zip(marker_centres(), mat["ids"]):
         draw_marker(p, cx, cy, mid)
