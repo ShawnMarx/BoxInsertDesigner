@@ -1529,6 +1529,19 @@ const newProject = () => openDialog('New project', `
   return true;
 });
 
+const renameProject = () => openDialog('Rename project', `
+  <label>Game <input name="name" required value="${esc(state?.spec?.game?.name || '')}"></label>
+  <div class="form-actions"><span class="spacer"></span><button class="primary" type="submit">Rename</button></div>`, async (f) => {
+  const name = f.name.value.trim();
+  if (!name) return false;
+  const r = await fetch('/api/command', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ cmd: 'set_game', game, name }) });
+  const v = await r.json();
+  if (!v.ok) { toast(v.reason?.message || 'could not rename'); return false; }
+  await loadGames();
+  await refresh();
+  return true;
+});
+
 function renderTrays() {
   renderPlacement();
 }
@@ -1599,9 +1612,11 @@ async function loadGames() {
 }
 function renderProjectMenu() {
   $('project-menu').innerHTML = games.games.map((s) => `<button type="button" role="menuitemradio" aria-checked="${s === game}" data-project="${esc(s)}">${esc(games.names?.[s] || s)}</button>`).join('')
-    + '<hr><button type="button" role="menuitem" id="project-new">New project…</button>';
+    + '<hr><button type="button" role="menuitem" id="project-rename">Rename this project…</button>'
+    + '<button type="button" role="menuitem" id="project-new">New project…</button>';
   for (const b of $('project-menu').querySelectorAll('[data-project]')) b.addEventListener('click', () => { closeProjectMenu(); switchGame(b.dataset.project, true); });
   $('project-new').addEventListener('click', () => { closeProjectMenu(); newProject(); });
+  $('project-rename').addEventListener('click', () => { closeProjectMenu(); renameProject(); });
 }
 function closeProjectMenu() { $('project-menu').hidden = true; $('game-name').setAttribute('aria-expanded', 'false'); }
 $('game-name').addEventListener('click', async () => {
