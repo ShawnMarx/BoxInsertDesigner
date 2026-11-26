@@ -470,6 +470,13 @@ Fits BID because a face texture is already a quad straightened to known proporti
   full driver (Scaling: Off) printed it at 100%. Not everyone will find that, so phase 1 still
   keeps a per-printer scale (the measured 200 mm ruler / 200) and
   applies it to every scan; White mat (IDs 12–17, no field colour) is the sizing check
+- First test (2026-11-26, two d6 on the Magenta mat, handheld, dappled shadow): all six markers
+  found; the field keyed out cleanly through the shadows, even round a red die (hue 0/179 vs the
+  field's 172). A straight-down shot can't give the camera's height from the markers alone
+  (focal length and distance trade off), and a cube's size depends on it: 17.5 mm at 24 mm-equiv
+  (1×), 18.3 at 48 mm (2×), against 19–20 mm for the raw outline. So phase 1 reads the photo's
+  EXIF focal length (35 mm-equiv) before `save_photo` strips it, and treats a tall piece's
+  outline as top-face-enlarged. Paper flatness: marker corners fit the plane to 0.34 mm mean
 - [ ] Phase 1: `bid scan_mat` / a Components-tab link prints the mat PDF (Letter; A4 later),
       with a scale bar to confirm 100% printing. Upload a top photo as a `scan` (the four mat
       corners tapped, reusing the face-marking UI) → homography → teal keyed out → outline as a
